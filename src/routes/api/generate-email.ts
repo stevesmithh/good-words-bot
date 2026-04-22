@@ -126,7 +126,7 @@ export const Route = createFileRoute("/api/generate-email")({
                     parameters: {
                       type: "object",
                       properties: {
-                        subject: { type: "string", description: "Subject line, under 50 chars." },
+                        subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
                         preview: { type: "string", description: "Preview text, under 90 chars." },
                         header: { type: "string", description: "Email header, 3-7 words." },
                         body: { type: "string", description: "Email body, 5-8 sentences." },
