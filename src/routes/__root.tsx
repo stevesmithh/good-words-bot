@@ -32,16 +32,8 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Email Copy Generator" },
       { name: "description", content: "Email Copy Generator" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Email Copy Generator" },
-      { property: "og:description", content: "Email Copy Generator" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Email Copy Generator" },
-      { name: "twitter:description", content: "Email Copy Generator" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d8c4ee9d-58d0-46d8-9bd6-c8539ade620c" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d8c4ee9d-58d0-46d8-9bd6-c8539ade620c" },
+      { name: "robots", content: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
+      { name: "googlebot", content: "noindex, nofollow" },
     ],
     links: [
       {
