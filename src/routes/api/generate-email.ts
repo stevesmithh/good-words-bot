@@ -76,7 +76,12 @@ DELIVERABILITY RULES:
 - Subject line: MUST start with exactly one emoji that visually relates to the offer (e.g. 🎁 for gifts, 🎰 for spins, 💸 for cash back, 🎯 for targeted offers, ☕ for casual, 🌟 for rewards). Pick the single most relevant emoji — never more than one, never generic ones like 😀. Follow the emoji with one space, then the subject text. Total length under 50 characters including the emoji. Personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
 - Preview text: adds new context not in subject, under 90 characters, no pressure language.
 - Header: 3–7 words, warm and plain.
-- Body: 5–8 sentences. Start with warm opener for the audience. Then list each reward on its own line. End with one soft, low-pressure call to action — no "click here", no "buy now".
+- Body: structured as 2–3 short paragraphs separated by a blank line (\n\n). Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line. Structure:
+  1. Opening paragraph (1–3 sentences): warm opener tailored to the audience, leading into why you are writing. Sentences flow together in the same paragraph.
+  2. Rewards block: one short intro line, then each reward on its own line as a compact list (this is the ONLY place line breaks per item are allowed). Format each reward line as "Label: value" (e.g. "Goldmine Rewards: up to $300 weekly").
+  3. Closing paragraph (1–2 sentences): a soft, low-pressure nudge about where to find it or how to use it. No "click here", no "buy now". Sentences flow on the same line.
+- Use \n\n between paragraphs (blank line) and single \n only between reward items inside the rewards block.
+- Never start every sentence on a new line. Outside the rewards block, sentences should sit next to each other within a paragraph like a normal human email.
 
 Return the email using the provided tool.`;
 }
@@ -129,7 +134,7 @@ export const Route = createFileRoute("/api/generate-email")({
                         subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
                         preview: { type: "string", description: "Preview text, under 90 chars." },
                         header: { type: "string", description: "Email header, 3-7 words." },
-                        body: { type: "string", description: "Email body, 5-8 sentences." },
+                        body: { type: "string", description: "Email body as 2-3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow on the same line — do not break every sentence onto its own line. The rewards block is the only place where individual items go on their own lines (separated by single \\n)." },
                       },
                       required: ["subject", "preview", "header", "body"],
                       additionalProperties: false,
