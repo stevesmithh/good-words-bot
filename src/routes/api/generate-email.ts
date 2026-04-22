@@ -73,7 +73,7 @@ WRITING RULES:
 - No urgency pressure language.
 
 DELIVERABILITY RULES:
-- Subject line: under 50 characters, personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
+- Subject line: MUST start with exactly one emoji that visually relates to the offer (e.g. 🎁 for gifts, 🎰 for spins, 💸 for cash back, 🎯 for targeted offers, ☕ for casual, 🌟 for rewards). Pick the single most relevant emoji — never more than one, never generic ones like 😀. Follow the emoji with one space, then the subject text. Total length under 50 characters including the emoji. Personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
 - Preview text: adds new context not in subject, under 90 characters, no pressure language.
 - Header: 3–7 words, warm and plain.
 - Body: 5–8 sentences. Start with warm opener for the audience. Then list each reward on its own line. End with one soft, low-pressure call to action — no "click here", no "buy now".
