@@ -1,34 +1,92 @@
 
-# Fix email body formatting (less robotic, more human)
+# Add SMS Copy Generator (bulk SMS, US-focused)
 
-The current output puts every sentence on its own line, which looks like a checklist instead of a real email. Goal: make the body read like a normal human-written email — sentences flow in paragraphs, with line breaks used only where they actually belong.
+A second tool alongside the email generator for short bulk-SMS copy. Uses the same architecture: server route + Lovable AI Gateway + tool-calling for structured output.
 
-## What changes
+## Navigation
 
-Only `src/routes/api/generate-email.ts` — prompt + tool description. No UI changes needed.
+Add a top-of-page tab switcher on `/` so the user can flip between **Email** and **SMS** without a full second route. Keeps the single-page, no-nav app structure intact.
 
-### New body formatting rules (added to prompt)
+```text
+[ Email ]  [ SMS ]
+```
 
-- Body is structured as **2–3 short paragraphs**, separated by a blank line.
-- Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line.
-- Suggested structure:
-  1. **Opening paragraph** (1–3 sentences): warm opener tailored to the audience, leading into why you're writing.
-  2. **Rewards block**: short intro line, then each reward on its own line as a compact list (this is the ONLY place line breaks per item are allowed). Format each reward line as `Label: value` (e.g. `Goldmine Rewards: up to $300 weekly`).
-  3. **Closing paragraph** (1–2 sentences): a soft, low-pressure nudge about where to find it / how to use it. No "click here", no "buy now".
-- Use `\n\n` between paragraphs (blank line) and single `\n` only between reward items.
-- Do not start every sentence on a new line.
-- Keep the existing rules: ≤20 words per sentence, no "I"/"We" sentence starts, no exclamation marks, no urgency language, simple everyday words.
+## SMS form (left side)
 
-### Tool schema tweak
+- **SMS type** — 4 segmented buttons:
+  1. Promotional (no code)
+  2. Deposit coupon code
+  3. Deposit bonus (1st / 2nd / 3rd)
+  4. Signup promo code
+- **Conditional fields** based on type:
+  - *Deposit coupon code* → `Coupon code` text input (required), `Bonus description` (e.g. "100% up to $200")
+  - *Deposit bonus* → dropdown for "1st / 2nd / 3rd deposit", `Bonus amount or %` input, optional `Coupon code`
+  - *Signup promo code* → `Promo code` (required), `Free play reward` input
+  - *Promotional* → just the offer description
+- **Offer details** — short textarea, required (placeholder explains "what we are giving and any context")
+- **Audience** — New / Active / Inactive (same as email)
+- **Brand name** — optional
+- **CTA link** — required, the URL appended at the end (validated as URL). The model treats it as a token, never rewrites it.
+- **Length target** — radio: "Short (under 160 chars / 1 segment)" or "Standard (10–15 words + link)". Default: Short.
+- **Spam category toggles** — pill chips, all on by default (see categories below)
+- **Extra forbidden words** — comma-separated input
+- **Generate SMS** button
 
-Update the `body` parameter description so the model knows the expected shape:
+## SMS spam-word categories (US-focused)
 
-> "Email body as 2–3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow on the same line — do not break every sentence onto its own line. The rewards block is the only place where individual items go on their own lines."
+Stored in `src/lib/sms-spam-words.ts`. Built from the user's list plus standard US carrier (AT&T / Verizon / T-Mobile) filter triggers researched and added:
 
-### Rendering
+1. **Financial & payments** — payment, withdraw, usd, cash, payslip, debit card, chase, bank, wire, deposit*, payout, ach, zelle, venmo, paypal, account, credit, loan, refund, tax
+2. **Crypto** — coin, coinbase, btc, bitcoin, eth, crypto, wallet, blockchain, nft, token
+3. **Work / income bait** — job, remote, hiring, work from home, side hustle, earn, salary, payslip, profitable, base
+4. **Prizes & gambling** — sweepstakes, lottery, jackpot, winner, prize, casino, bet
+5. **Discounts & urgency** — reduction, discount, % off, sale, limited time, expires, act now, hurry, last chance, today only
+6. **Generic spam triggers** — click here, click link, free, congratulations, claim, verify, suspended, locked, alert, urgent, code (when not paired with the user's coupon/promo field)
+7. **Geography flags** — USA, US-only (carriers flag these in promotional context)
+8. **Formatting triggers** — ALL CAPS words, $$$, !!!, repeated punctuation
 
-The UI already renders the body with `whitespace-pre-wrap`, so paragraph breaks (`\n\n`) and the reward list (`\n`) will display correctly with no UI change.
+*Coupon/promo code values entered by the user are passed through as-is and explicitly marked safe in the prompt — they never get filtered.
+
+I'll also research current US SMS-spam trigger lists during build (web search) and merge anything common that isn't already covered.
+
+## Output (right side)
+
+Just two cards (SMS is short — no subject/preview/header):
+
+1. **SMS message** — full text including the link at the end
+   - Live character count + segment count (1 segment = 160 chars GSM, 2 = 306, 3 = 459)
+   - Color: green ≤160, amber 161–306, red >306
+   - Copy button
+2. **Variants** — 2 alternate phrasings of the same message so the team can A/B or rotate (helps avoid carrier dedupe filtering on bulk sends)
+   - Each with its own copy button
+   - Each with its own char/segment count
+
+Plus a **Copy all variants** button.
+
+## Prompt rules (server-side)
+
+- Max 15 words for the message text, link counted separately and appended at the end exactly as provided.
+- Single sentence or two short ones — natural human tone, no marketing voice.
+- Must include the coupon/promo code verbatim when provided, formatted clearly (e.g. `Code: WELCOME50`).
+- For deposit bonus: include the bonus value the user entered, as written.
+- Never use any forbidden word (active categories ∪ extras), but allow user-provided code values to pass.
+- No "click here", no "free", no all-caps words, no `!!!`, no `$$$`.
+- Link goes at the very end, preceded by a single space, no trailing punctuation.
+- Return three options via tool calling: `{ message, variantA, variantB }`.
+
+## Files
+
+- **New**: `src/lib/sms-spam-words.ts` — categories + safe replacements
+- **New**: `src/routes/api/generate-sms.ts` — server route, tool-calling, same error handling pattern as email (429, 402, parse failures with raw collapsible)
+- **New**: `src/components/SmsGenerator.tsx` — the SMS form + output
+- **New**: `src/components/EmailGenerator.tsx` — extracted from current `index.tsx` (just a refactor — same code, same behavior)
+- **Edit**: `src/routes/index.tsx` — replace body with a Tabs (`Email` / `SMS`) wrapper that renders the two components. Header stays the same but title becomes "Copy Generator".
+- **Edit**: `src/routes/__root.tsx` — page title → "Copy Generator"
+
+## Error handling
+
+Same as email: inline validation, toast on API errors, 429 / 402 friendly messages, collapsible raw response on parse failure.
 
 ## Result
 
-Output will look like a normal email — flowing opening paragraph, a tidy rewards list in the middle, and a calm closing paragraph — instead of one sentence per line top to bottom.
+One page, two tabs. Email tool stays exactly as it is. SMS tool produces a tight 10–15 word message + the user's link, scrubbed of US carrier spam triggers, with two extra variants for rotation, plus full coupon/bonus/signup-code support.
