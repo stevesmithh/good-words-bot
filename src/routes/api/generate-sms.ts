@@ -98,7 +98,7 @@ ${input.couponCode ? `- Include the coupon code verbatim: "Code: ${input.couponC
       ? "Message text MUST be under 160 characters TOTAL including the link. Aim for 10-15 words."
       : "Message text should be 10-15 words plus the link at the end. Total ideally under 200 characters.";
 
-  return `You are an SMS copywriter for bulk US carrier SMS sending. Write a short, human, deliverable text message that avoids US carrier spam filters (AT&T, Verizon, T-Mobile).
+  return `You are writing bulk SMS for a US audience. The goal: messages that read like a real person texting a friend in everyday American English — casual, intriguing, and human — while passing US carrier spam filters (AT&T, Verizon, T-Mobile).
 
 ${brandLine}Audience: ${AUDIENCE_LABEL[input.audience]}
 Tone: ${AUDIENCE_TONE[input.audience]}
@@ -108,32 +108,44 @@ ${typeRules}
 
 LENGTH: ${lengthRule}
 
+VOICE — DAILY US TEXT MESSAGE:
+- Write the way Americans actually text each other. Loose, casual, conversational.
+- Use everyday spoken phrases: "hey", "btw", "ngl", "fyi", "heads up", "quick one", "sooo", "k so", "real quick", "just dropped", "saw this and thought of you", "thought you'd want to know", "okay this is actually pretty cool".
+- Lowercase is fine and often better than perfect capitalization. Sentence fragments are fine.
+- Light, natural punctuation only. A single "..." or "?" is great. No "!!!", no double punctuation, no emoji spam.
+- One small emoji is OK if it fits naturally (👀 🎯 🤝 🎁 🍀). Never more than one. Often none is best.
+- Curiosity hook over hard sell. Make them think "wait, what?" and tap the link to find out.
+- Tease the value, don't shout it. Hint at the reward without sounding like an ad.
+- Sound like a heads-up from a friend, not a brand announcement.
+
 LINK HANDLING:
 - The CTA link is: ${input.ctaLink}
 - Place the link at the very end of the message, preceded by exactly one space.
-- Do NOT add punctuation after the link.
-- Do NOT rewrite, shorten, or modify the link in any way — copy it exactly.
-- Do NOT use phrases like "click here", "click link", "tap here". Just let the link speak for itself.
+- No punctuation before or after the link.
+- Do NOT rewrite, shorten, or modify the link — copy it exactly as given.
+- Never use "click here", "click link", "tap here", "check this out and click", or any explicit click instruction. Let the link sit naturally at the end like a friend dropping a link in chat.
 
-FORBIDDEN WORDS (do not use any of these):
+FORBIDDEN WORDS (must not appear in any variant):
 ${forbiddenList}
 
 SAFE REPLACEMENTS:
 ${replacementLines}
 
-WRITING RULES:
-- Sound like a real person texting, not a marketer.
-- Single sentence or two very short ones.
-- No ALL CAPS words. No "!!!". No "$$$". No repeated punctuation.
-- No urgency pressure. No "free". No "click here".
-- Plain everyday language.
-${userCodes.length > 0 ? `- The user-provided code(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim — they are ALWAYS allowed even if they look like forbidden words.` : ""}
+HARD RULES (apply to all three variants):
+- Single short sentence, or two very short fragments. Max 15 words of text (link not counted).
+- No ALL CAPS words. No "!!!". No "$$$". No "???". No repeated punctuation.
+- No urgency pressure ("hurry", "last chance", "expires today", etc.).
+- No marketing voice. No "exclusive", no "limited", no "amazing".
+- No greetings like "Dear customer". No formal sign-offs.
+${userCodes.length > 0 ? `- The user-provided code(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "code: ${userCodes[0]}" — not as a yelling promo banner.` : ""}
 
-VARIANTS:
-- Return THREE different phrasings of the same message: "message" (primary), "variantA", "variantB".
-- Each variant must convey the same offer and include the same code/value if applicable.
-- Use noticeably different wording in each so carriers don't dedupe them on bulk send.
-- Each variant must follow ALL the rules above and include the link at the end.
+VARIANTS — three genuinely different angles:
+- "message" (primary): casual heads-up style. The most natural-sounding version.
+- "variantA": curiosity hook. Make them wonder what's behind the link without giving everything away. Something like "okay this is actually pretty wild...", "you're gonna want to see this", "saw this and thought of you", "ngl this looks legit".
+- "variantB": friend-recommendation style. Reads like a buddy forwarding something. Something like "heads up — this one's worth a look", "thought you'd want to know about this", "btw this just dropped".
+- All three must convey the same offer and include the same code/value if applicable.
+- Use noticeably different wording, sentence shape, and opener in each so carriers don't dedupe them on bulk send.
+- Every variant must follow ALL rules above and end with the link.
 
 Return your answer using the provided tool.`;
 }
