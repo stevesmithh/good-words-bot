@@ -102,8 +102,7 @@ export function SmsGenerator() {
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!offerDetails.trim()) e.offer = "Required.";
-    if (!ctaLink.trim()) e.link = "Required.";
-    else {
+    if (ctaLink.trim()) {
       try {
         new URL(ctaLink);
       } catch {
@@ -130,7 +129,7 @@ export function SmsGenerator() {
         offerDetails,
         audience,
         brandName: brandName.trim() || undefined,
-        ctaLink: ctaLink.trim(),
+        ctaLink: ctaLink.trim() || undefined,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
@@ -204,7 +203,7 @@ export function SmsGenerator() {
         <CardHeader>
           <CardTitle>SMS details</CardTitle>
           <CardDescription>
-            Short, US-carrier-friendly bulk SMS with a CTA link.
+            Short, US-carrier-friendly bulk SMS, link optional.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -379,9 +378,7 @@ export function SmsGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="link">
-              CTA link <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="link">CTA link (optional)</Label>
             <Input
               id="link"
               type="url"
@@ -395,7 +392,7 @@ export function SmsGenerator() {
             />
             {errors.link && <p className="text-xs text-destructive">{errors.link}</p>}
             <p className="text-xs text-muted-foreground">
-              Appended at the end exactly as entered. Use a short URL for best deliverability.
+              If provided, appended at the end exactly as entered. Leave empty for no link.
             </p>
           </div>
 
@@ -641,7 +638,7 @@ function SmsEmptyState() {
         </div>
         <p className="text-sm font-medium">Your SMS will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick the SMS type, fill in the offer and CTA link, then click generate.
+          Pick the SMS type, fill in the offer, then click generate.
         </p>
       </CardContent>
     </Card>
