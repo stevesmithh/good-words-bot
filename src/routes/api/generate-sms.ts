@@ -216,7 +216,7 @@ export const Route = createFileRoute("/api/generate-sms")({
                   type: "function",
                   function: {
                     name: "return_sms",
-                    description: "Return five SMS variants: 3 standard + 2 casual.",
+                    description: "Return six SMS variants: 3 standard + 3 casual.",
                     parameters: {
                       type: "object",
                       properties: {
@@ -245,8 +245,13 @@ export const Route = createFileRoute("/api/generate-sms")({
                           description:
                             "Casual variant B — daily US text style, friend-recommendation tone. Lowercase / slang allowed. Link at end.",
                         },
+                        casualC: {
+                          type: "string",
+                          description:
+                            "Casual variant C — daily US text style, low-key heads-up / FYI tone. Lowercase / slang allowed. Link at end.",
+                        },
                       },
-                      required: ["message", "standardA", "standardB", "casualA", "casualB"],
+                      required: ["message", "standardA", "standardB", "casualA", "casualB", "casualC"],
                       additionalProperties: false,
                     },
                   },
