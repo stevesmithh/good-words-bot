@@ -129,7 +129,7 @@ export function SmsGenerator() {
         offerDetails,
         audience,
         brandName: brandName.trim() || undefined,
-        ctaLink: ctaLink.trim(),
+        ctaLink: ctaLink.trim() || undefined,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
