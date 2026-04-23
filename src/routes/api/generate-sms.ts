@@ -139,12 +139,20 @@ HARD RULES (apply to all three variants):
 - No greetings like "Dear customer". No formal sign-offs.
 ${userCodes.length > 0 ? `- The user-provided code(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "code: ${userCodes[0]}" — not as a yelling promo banner.` : ""}
 
-VARIANTS — three genuinely different angles:
-- "message" (primary): casual heads-up style. The most natural-sounding version.
-- "variantA": curiosity hook. Make them wonder what's behind the link without giving everything away. Something like "okay this is actually pretty wild...", "you're gonna want to see this", "saw this and thought of you", "ngl this looks legit".
-- "variantB": friend-recommendation style. Reads like a buddy forwarding something. Something like "heads up — this one's worth a look", "thought you'd want to know about this", "btw this just dropped".
-- All three must convey the same offer and include the same code/value if applicable.
-- Use noticeably different wording, sentence shape, and opener in each so carriers don't dedupe them on bulk send.
+VARIANTS — return FIVE messages, all conveying the same offer and code/value.
+
+The first three are STANDARD style — clean, professional, brand-safe SMS copy. Polished but still natural. Proper sentence case. No slang, no abbreviations like "ngl"/"btw", no lowercase-only sentences. Think how a well-run marketing team would write it.
+- "message" (primary standard): the cleanest, most balanced version. Clear value, friendly, professional.
+- "standardA": informative angle. Lead with what they get. Direct and clear.
+- "standardB": benefit-led angle. Lead with the outcome or feeling. Still polished.
+
+The last two are CASUAL style — daily US text-message tone using the VOICE rules above (lowercase ok, slang ok, sentence fragments ok, curiosity hooks).
+- "casualA": curiosity hook. Make them wonder what's behind the link without giving everything away. Something like "okay this is actually pretty wild...", "you're gonna want to see this", "saw this and thought of you", "ngl this looks legit".
+- "casualB": friend-recommendation style. Reads like a buddy forwarding something. Something like "heads up — this one's worth a look", "thought you'd want to know about this", "btw this just dropped".
+
+Rules for ALL five variants:
+- Same offer. Same code/value if applicable.
+- Noticeably different wording, sentence shape, and opener so carriers don't dedupe on bulk send.
 - Every variant must follow ALL rules above and end with the link.
 
 Return your answer using the provided tool.`;
@@ -207,27 +215,37 @@ export const Route = createFileRoute("/api/generate-sms")({
                   type: "function",
                   function: {
                     name: "return_sms",
-                    description: "Return the generated SMS message and two variants.",
+                    description: "Return five SMS variants: 3 standard + 2 casual.",
                     parameters: {
                       type: "object",
                       properties: {
                         message: {
                           type: "string",
                           description:
-                            "Primary SMS message including the link at the end. Must follow all rules.",
+                            "Primary STANDARD SMS — clean, polished, professional. Link at end.",
                         },
-                        variantA: {
+                        standardA: {
                           type: "string",
                           description:
-                            "First alternate phrasing of the same SMS. Same offer, different wording, link at end.",
+                            "Standard variant A — informative angle, leads with what they get. Polished tone. Link at end.",
                         },
-                        variantB: {
+                        standardB: {
                           type: "string",
                           description:
-                            "Second alternate phrasing of the same SMS. Same offer, different wording, link at end.",
+                            "Standard variant B — benefit-led angle, leads with outcome. Polished tone. Link at end.",
+                        },
+                        casualA: {
+                          type: "string",
+                          description:
+                            "Casual variant A — daily US text style, curiosity hook. Lowercase / slang allowed. Link at end.",
+                        },
+                        casualB: {
+                          type: "string",
+                          description:
+                            "Casual variant B — daily US text style, friend-recommendation tone. Lowercase / slang allowed. Link at end.",
                         },
                       },
-                      required: ["message", "variantA", "variantB"],
+                      required: ["message", "standardA", "standardB", "casualA", "casualB"],
                       additionalProperties: false,
                     },
                   },
@@ -282,7 +300,13 @@ export const Route = createFileRoute("/api/generate-sms")({
             );
           }
 
-          let parsed: { message: string; variantA: string; variantB: string };
+          let parsed: {
+            message: string;
+            standardA: string;
+            standardB: string;
+            casualA: string;
+            casualB: string;
+          };
           try {
             parsed = JSON.parse(argsStr);
           } catch {
