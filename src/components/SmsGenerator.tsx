@@ -102,8 +102,7 @@ export function SmsGenerator() {
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!offerDetails.trim()) e.offer = "Required.";
-    if (!ctaLink.trim()) e.link = "Required.";
-    else {
+    if (ctaLink.trim()) {
       try {
         new URL(ctaLink);
       } catch {
