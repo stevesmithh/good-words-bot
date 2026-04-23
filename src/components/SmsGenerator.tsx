@@ -193,6 +193,7 @@ export function SmsGenerator() {
       `Standard B:\n${result.standardB}`,
       `Casual A:\n${result.casualA}`,
       `Casual B:\n${result.casualB}`,
+      `Casual C:\n${result.casualC}`,
     ].join("\n\n");
   }, [result]);
 
