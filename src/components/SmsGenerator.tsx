@@ -42,6 +42,7 @@ type SmsResult = {
   standardB: string;
   casualA: string;
   casualB: string;
+  casualC: string;
 };
 
 const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
@@ -192,6 +193,7 @@ export function SmsGenerator() {
       `Standard B:\n${result.standardB}`,
       `Casual A:\n${result.casualA}`,
       `Casual B:\n${result.casualB}`,
+      `Casual C:\n${result.casualC}`,
     ].join("\n\n");
   }, [result]);
 
@@ -550,6 +552,11 @@ export function SmsGenerator() {
               title="Casual B"
               value={result.casualB}
               onCopy={() => copy(result.casualB, "Casual B")}
+            />
+            <SmsCard
+              title="Casual C"
+              value={result.casualC}
+              onCopy={() => copy(result.casualC, "Casual C")}
             />
 
             <Button
