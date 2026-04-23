@@ -1,0 +1,610 @@
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Copy, Loader2, MessageSquare, Sparkles, AlertCircle } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import {
+  SMS_SPAM_CATEGORIES,
+  type SmsSpamCategoryId,
+} from "@/lib/sms-spam-words";
+
+type Audience = "new" | "active" | "inactive";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
+type LengthTarget = "short" | "standard";
+type DepositOrdinal = "1st" | "2nd" | "3rd";
+
+type SmsResult = {
+  message: string;
+  variantA: string;
+  variantB: string;
+};
+
+const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
+  { id: "promotional", label: "Promotional", desc: "No code" },
+  { id: "deposit_coupon", label: "Deposit coupon", desc: "Code for deposit bonus" },
+  { id: "deposit_bonus", label: "Deposit bonus", desc: "1st / 2nd / 3rd" },
+  { id: "signup_promo", label: "Signup promo", desc: "Code for signup" },
+];
+
+function segmentInfo(text: string) {
+  const len = text.length;
+  let segments = 1;
+  if (len > 160 && len <= 306) segments = 2;
+  else if (len > 306 && len <= 459) segments = 3;
+  else if (len > 459) segments = Math.ceil(len / 153);
+  let color: "green" | "amber" | "red" = "green";
+  if (len > 306) color = "red";
+  else if (len > 160) color = "amber";
+  return { len, segments, color };
+}
+
+export function SmsGenerator() {
+  const [smsType, setSmsType] = useState<SmsType>("promotional");
+  const [offerDetails, setOfferDetails] = useState("");
+  const [audience, setAudience] = useState<Audience>("active");
+  const [brandName, setBrandName] = useState("");
+  const [ctaLink, setCtaLink] = useState("");
+  const [lengthTarget, setLengthTarget] = useState<LengthTarget>("short");
+  const [extraForbidden, setExtraForbidden] = useState("");
+  const [activeCategories, setActiveCategories] = useState<Set<SmsSpamCategoryId>>(
+    () => new Set(SMS_SPAM_CATEGORIES.map((c) => c.id)),
+  );
+
+  // Conditional fields
+  const [couponCode, setCouponCode] = useState("");
+  const [bonusDescription, setBonusDescription] = useState("");
+  const [depositOrdinal, setDepositOrdinal] = useState<DepositOrdinal>("1st");
+  const [bonusAmount, setBonusAmount] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [freePlayReward, setFreePlayReward] = useState("");
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<SmsResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [rawError, setRawError] = useState<string | null>(null);
+
+  const toggleCategory = (id: SmsSpamCategoryId) => {
+    setActiveCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!offerDetails.trim()) e.offer = "Required.";
+    if (!ctaLink.trim()) e.link = "Required.";
+    else {
+      try {
+        new URL(ctaLink);
+      } catch {
+        e.link = "Must be a valid URL (https://…).";
+      }
+    }
+    if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
+    if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
+    if (smsType === "deposit_bonus" && !bonusAmount.trim()) e.bonus = "Required.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleGenerate = async () => {
+    if (!validate()) return;
+    setErrorMsg(null);
+    setRawError(null);
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        smsType,
+        offerDetails,
+        audience,
+        brandName: brandName.trim() || undefined,
+        ctaLink: ctaLink.trim(),
+        lengthTarget,
+        extraForbidden: extraForbidden.trim() || undefined,
+        activeCategories: Array.from(activeCategories),
+      };
+      if (smsType === "deposit_coupon") {
+        payload.couponCode = couponCode.trim();
+        payload.bonusDescription = bonusDescription.trim() || undefined;
+      }
+      if (smsType === "deposit_bonus") {
+        payload.depositOrdinal = depositOrdinal;
+        payload.bonusAmount = bonusAmount.trim();
+        if (couponCode.trim()) payload.couponCode = couponCode.trim();
+      }
+      if (smsType === "signup_promo") {
+        payload.promoCode = promoCode.trim();
+        payload.freePlayReward = freePlayReward.trim() || undefined;
+      }
+
+      const resp = await fetch("/api/generate-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok) {
+        const msg = (data?.error as string) || `Request failed with status ${resp.status}`;
+        setErrorMsg(`API error: ${resp.status} — ${msg}`);
+        if (data?.raw) setRawError(String(data.raw));
+        toast.error(msg);
+        return;
+      }
+
+      setResult(data as SmsResult);
+      toast.success("SMS generated");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setErrorMsg(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
+  };
+
+  const allVariants = useMemo(() => {
+    if (!result) return "";
+    return `Primary:\n${result.message}\n\nVariant A:\n${result.variantA}\n\nVariant B:\n${result.variantB}`;
+  }, [result]);
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      {/* Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>SMS details</CardTitle>
+          <CardDescription>
+            Short, US-carrier-friendly bulk SMS with a CTA link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* SMS type segmented buttons */}
+          <div className="space-y-2">
+            <Label>SMS type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {SMS_TYPES.map((t) => {
+                const on = smsType === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSmsType(t.id)}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-left transition-colors",
+                      on
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:border-foreground/30",
+                    )}
+                    aria-pressed={on}
+                  >
+                    <div className="text-sm font-medium">{t.label}</div>
+                    <div className="text-xs text-muted-foreground">{t.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Conditional fields */}
+          {smsType === "deposit_coupon" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="coupon">
+                  Coupon code <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="coupon"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="WELCOME50"
+                  aria-invalid={!!errors.coupon}
+                />
+                {errors.coupon && <p className="text-xs text-destructive">{errors.coupon}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bonusDesc">Bonus description</Label>
+                <Input
+                  id="bonusDesc"
+                  value={bonusDescription}
+                  onChange={(e) => setBonusDescription(e.target.value)}
+                  placeholder="100% up to $200"
+                />
+              </div>
+            </div>
+          )}
+
+          {smsType === "deposit_bonus" && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ordinal">Deposit</Label>
+                  <Select
+                    value={depositOrdinal}
+                    onValueChange={(v) => setDepositOrdinal(v as DepositOrdinal)}
+                  >
+                    <SelectTrigger id="ordinal">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1st">1st deposit</SelectItem>
+                      <SelectItem value="2nd">2nd deposit</SelectItem>
+                      <SelectItem value="3rd">3rd deposit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bonusAmt">
+                    Bonus amount or % <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="bonusAmt"
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(e.target.value)}
+                    placeholder="100% up to $300"
+                    aria-invalid={!!errors.bonus}
+                  />
+                  {errors.bonus && <p className="text-xs text-destructive">{errors.bonus}</p>}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="couponOpt">Coupon code (optional)</Label>
+                <Input
+                  id="couponOpt"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="DEPOSIT300"
+                />
+              </div>
+            </div>
+          )}
+
+          {smsType === "signup_promo" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="promo">
+                  Promo code <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="promo"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="JOIN25"
+                  aria-invalid={!!errors.promo}
+                />
+                {errors.promo && <p className="text-xs text-destructive">{errors.promo}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reward">Signup reward</Label>
+                <Input
+                  id="reward"
+                  value={freePlayReward}
+                  onChange={(e) => setFreePlayReward(e.target.value)}
+                  placeholder="$10 free play"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="smsOffer">
+              Offer details <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="smsOffer"
+              value={offerDetails}
+              onChange={(e) => {
+                setOfferDetails(e.target.value);
+                if (errors.offer) setErrors({ ...errors, offer: "" });
+              }}
+              placeholder="What you are giving and any context"
+              className="min-h-[80px]"
+              aria-invalid={!!errors.offer}
+            />
+            {errors.offer && <p className="text-xs text-destructive">{errors.offer}</p>}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="smsAud">Audience</Label>
+              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+                <SelectTrigger id="smsAud">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New users</SelectItem>
+                  <SelectItem value="active">Active users</SelectItem>
+                  <SelectItem value="inactive">Inactive users</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smsBrand">Brand name (optional)</Label>
+              <Input
+                id="smsBrand"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="Acme"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="link">
+              CTA link <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="link"
+              type="url"
+              value={ctaLink}
+              onChange={(e) => {
+                setCtaLink(e.target.value);
+                if (errors.link) setErrors({ ...errors, link: "" });
+              }}
+              placeholder="https://example.com/promo"
+              aria-invalid={!!errors.link}
+            />
+            {errors.link && <p className="text-xs text-destructive">{errors.link}</p>}
+            <p className="text-xs text-muted-foreground">
+              Appended at the end exactly as entered. Use a short URL for best deliverability.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Length target</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["short", "standard"] as LengthTarget[]).map((opt) => {
+                const on = lengthTarget === opt;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setLengthTarget(opt)}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-left text-xs transition-colors",
+                      on
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:border-foreground/30",
+                    )}
+                  >
+                    <div className="font-medium">
+                      {opt === "short" ? "Short" : "Standard"}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {opt === "short" ? "Under 160 chars (1 segment)" : "10–15 words + link"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="smsExtra">Extra forbidden words (optional)</Label>
+            <Input
+              id="smsExtra"
+              value={extraForbidden}
+              onChange={(e) => setExtraForbidden(e.target.value)}
+              placeholder="comma, separated, words"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Spam categories to filter</Label>
+              <span className="text-xs text-muted-foreground">
+                {activeCategories.size} of {SMS_SPAM_CATEGORIES.length} on
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SMS_SPAM_CATEGORIES.map((cat) => {
+                const on = activeCategories.has(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => toggleCategory(cat.id)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                      on
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                    )}
+                    aria-pressed={on}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Button onClick={handleGenerate} disabled={loading} className="w-full" size="lg">
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Generate SMS
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Output */}
+      <div className="space-y-4">
+        {errorMsg && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="space-y-3 pt-6">
+              <div className="flex items-start gap-2 text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-sm font-medium">{errorMsg}</p>
+              </div>
+              {rawError && (
+                <Collapsible>
+                  <CollapsibleTrigger className="text-xs text-muted-foreground underline underline-offset-2">
+                    Show raw response
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <pre className="mt-2 max-h-60 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-words">
+                      {rawError}
+                    </pre>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {loading && !result && <SmsLoadingSkeleton />}
+
+        {!loading && !result && !errorMsg && <SmsEmptyState />}
+
+        {result && (
+          <>
+            <SmsCard
+              title="Primary message"
+              value={result.message}
+              onCopy={() => copy(result.message, "Message")}
+            />
+            <SmsCard
+              title="Variant A"
+              value={result.variantA}
+              onCopy={() => copy(result.variantA, "Variant A")}
+            />
+            <SmsCard
+              title="Variant B"
+              value={result.variantB}
+              onCopy={() => copy(result.variantB, "Variant B")}
+            />
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => copy(allVariants, "All variants")}
+            >
+              <Copy className="h-4 w-4" />
+              Copy all variants
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SmsCard({
+  title,
+  value,
+  onCopy,
+}: {
+  title: string;
+  value: string;
+  onCopy: () => void;
+}) {
+  const { len, segments, color } = segmentInfo(value);
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+        <div className="space-y-1">
+          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+          <p
+            className={cn(
+              "text-xs font-medium",
+              color === "green" && "text-success",
+              color === "amber" && "text-warning",
+              color === "red" && "text-destructive",
+            )}
+          >
+            {len} chars · {segments} segment{segments > 1 ? "s" : ""}
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onCopy} className="h-8 px-2">
+          <Copy className="h-3.5 w-3.5" />
+          Copy
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
+          {value}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SmsLoadingSkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <Card key={i}>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  );
+}
+
+function SmsEmptyState() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+          <MessageSquare className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <p className="text-sm font-medium">Your SMS will appear here</p>
+        <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+          Pick the SMS type, fill in the offer and CTA link, then click generate.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
