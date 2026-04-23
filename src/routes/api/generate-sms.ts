@@ -118,12 +118,19 @@ VOICE — DAILY US TEXT MESSAGE:
 - Tease the value, don't shout it. Hint at the reward without sounding like an ad.
 - Sound like a heads-up from a friend, not a brand announcement.
 
-LINK HANDLING:
+${
+  input.ctaLink && input.ctaLink.trim()
+    ? `LINK HANDLING:
 - The CTA link is: ${input.ctaLink}
 - Place the link at the very end of the message, preceded by exactly one space.
 - No punctuation before or after the link.
 - Do NOT rewrite, shorten, or modify the link — copy it exactly as given.
-- Never use "click here", "click link", "tap here", "check this out and click", or any explicit click instruction. Let the link sit naturally at the end like a friend dropping a link in chat.
+- Never use "click here", "click link", "tap here", "check this out and click", or any explicit click instruction. Let the link sit naturally at the end like a friend dropping a link in chat.`
+    : `NO LINK:
+- Do NOT include any URL or link in any variant.
+- End each message naturally — a soft nudge or open-ended line is fine.
+- Do NOT invent a placeholder link.`
+}
 
 FORBIDDEN WORDS (must not appear in any variant):
 ${forbiddenList}
@@ -169,13 +176,12 @@ export const Route = createFileRoute("/api/generate-sms")({
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
-          if (!body.ctaLink || !body.ctaLink.trim()) {
-            return Response.json({ error: "CTA link is required." }, { status: 400 });
-          }
-          try {
-            new URL(body.ctaLink);
-          } catch {
-            return Response.json({ error: "CTA link must be a valid URL." }, { status: 400 });
+          if (body.ctaLink && body.ctaLink.trim()) {
+            try {
+              new URL(body.ctaLink);
+            } catch {
+              return Response.json({ error: "CTA link must be a valid URL." }, { status: 400 });
+            }
           }
           if (body.smsType === "deposit_coupon" && !body.couponCode?.trim()) {
             return Response.json({ error: "Coupon code is required." }, { status: 400 });
