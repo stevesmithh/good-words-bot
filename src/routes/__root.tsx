@@ -30,8 +30,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Email Copy Generator" },
-      { name: "description", content: "Email Copy Generator" },
+      { title: "Copy Generator" },
+      { name: "description", content: "Copy Generator" },
       { name: "robots", content: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
       { name: "googlebot", content: "noindex, nofollow" },
     ],

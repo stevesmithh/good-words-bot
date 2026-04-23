@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
 import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateSmsRoute = ApiGenerateSmsRouteImport.update({
+  id: '/api/generate-sms',
+  path: '/api/generate-sms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
@@ -26,27 +32,31 @@ const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
+  '/api/generate-sms': typeof ApiGenerateSmsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
+  '/api/generate-sms': typeof ApiGenerateSmsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
+  '/api/generate-sms': typeof ApiGenerateSmsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/generate-email'
+  fullPaths: '/' | '/api/generate-email' | '/api/generate-sms'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/generate-email'
-  id: '__root__' | '/' | '/api/generate-email'
+  to: '/' | '/api/generate-email' | '/api/generate-sms'
+  id: '__root__' | '/' | '/api/generate-email' | '/api/generate-sms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
+  ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-sms': {
+      id: '/api/generate-sms'
+      path: '/api/generate-sms'
+      fullPath: '/api/generate-sms'
+      preLoaderRoute: typeof ApiGenerateSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-email': {
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,
+  ApiGenerateSmsRoute: ApiGenerateSmsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
