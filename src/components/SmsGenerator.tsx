@@ -203,7 +203,7 @@ export function SmsGenerator() {
         <CardHeader>
           <CardTitle>SMS details</CardTitle>
           <CardDescription>
-            Short, US-carrier-friendly bulk SMS with a CTA link.
+            Short, US-carrier-friendly bulk SMS, link optional.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -378,9 +378,7 @@ export function SmsGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="link">
-              CTA link <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="link">CTA link (optional)</Label>
             <Input
               id="link"
               type="url"
@@ -394,7 +392,7 @@ export function SmsGenerator() {
             />
             {errors.link && <p className="text-xs text-destructive">{errors.link}</p>}
             <p className="text-xs text-muted-foreground">
-              Appended at the end exactly as entered. Use a short URL for best deliverability.
+              If provided, appended at the end exactly as entered. Leave empty for no link.
             </p>
           </div>
 
@@ -640,7 +638,7 @@ function SmsEmptyState() {
         </div>
         <p className="text-sm font-medium">Your SMS will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick the SMS type, fill in the offer and CTA link, then click generate.
+          Pick the SMS type, fill in the offer, then click generate.
         </p>
       </CardContent>
     </Card>
