@@ -38,8 +38,10 @@ type DepositOrdinal = "1st" | "2nd" | "3rd";
 
 type SmsResult = {
   message: string;
-  variantA: string;
-  variantB: string;
+  standardA: string;
+  standardB: string;
+  casualA: string;
+  casualB: string;
 };
 
 const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
@@ -184,7 +186,13 @@ export function SmsGenerator() {
 
   const allVariants = useMemo(() => {
     if (!result) return "";
-    return `Primary:\n${result.message}\n\nVariant A:\n${result.variantA}\n\nVariant B:\n${result.variantB}`;
+    return [
+      `Standard — Primary:\n${result.message}`,
+      `Standard A:\n${result.standardA}`,
+      `Standard B:\n${result.standardB}`,
+      `Casual A:\n${result.casualA}`,
+      `Casual B:\n${result.casualB}`,
+    ].join("\n\n");
   }, [result]);
 
   return (
@@ -505,21 +513,45 @@ export function SmsGenerator() {
 
         {result && (
           <>
+            <div className="flex items-center gap-2 pt-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Standard
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <SmsCard
-              title="Primary message"
+              title="Primary"
               value={result.message}
-              onCopy={() => copy(result.message, "Message")}
+              onCopy={() => copy(result.message, "Primary")}
             />
             <SmsCard
-              title="Variant A"
-              value={result.variantA}
-              onCopy={() => copy(result.variantA, "Variant A")}
+              title="Standard A"
+              value={result.standardA}
+              onCopy={() => copy(result.standardA, "Standard A")}
             />
             <SmsCard
-              title="Variant B"
-              value={result.variantB}
-              onCopy={() => copy(result.variantB, "Variant B")}
+              title="Standard B"
+              value={result.standardB}
+              onCopy={() => copy(result.standardB, "Standard B")}
             />
+
+            <div className="flex items-center gap-2 pt-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Casual / daily-text
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <SmsCard
+              title="Casual A"
+              value={result.casualA}
+              onCopy={() => copy(result.casualA, "Casual A")}
+            />
+            <SmsCard
+              title="Casual B"
+              value={result.casualB}
+              onCopy={() => copy(result.casualB, "Casual B")}
+            />
+
             <Button
               variant="secondary"
               className="w-full"
