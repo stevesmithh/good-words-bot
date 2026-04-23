@@ -312,6 +312,7 @@ export const Route = createFileRoute("/api/generate-sms")({
             standardB: string;
             casualA: string;
             casualB: string;
+            casualC: string;
           };
           try {
             parsed = JSON.parse(argsStr);

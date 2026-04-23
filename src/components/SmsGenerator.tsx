@@ -42,6 +42,7 @@ type SmsResult = {
   standardB: string;
   casualA: string;
   casualB: string;
+  casualC: string;
 };
 
 const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
