@@ -553,8 +553,8 @@ function SmsCard({
           <p
             className={cn(
               "text-xs font-medium",
-              color === "green" && "text-emerald-600 dark:text-emerald-500",
-              color === "amber" && "text-amber-600 dark:text-amber-500",
+              color === "green" && "text-success",
+              color === "amber" && "text-warning",
               color === "red" && "text-destructive",
             )}
           >
