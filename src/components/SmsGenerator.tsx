@@ -553,6 +553,11 @@ export function SmsGenerator() {
               value={result.casualB}
               onCopy={() => copy(result.casualB, "Casual B")}
             />
+            <SmsCard
+              title="Casual C"
+              value={result.casualC}
+              onCopy={() => copy(result.casualC, "Casual C")}
+            />
 
             <Button
               variant="secondary"
