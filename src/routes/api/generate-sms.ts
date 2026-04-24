@@ -79,24 +79,25 @@ function buildPrompt(input: SmsBody) {
       typeRules = `SMS type: Promotional message. Just describe the offer briefly.`;
       break;
     case "deposit_coupon":
-      typeRules = `SMS type: Deposit coupon code.
-- MUST include the coupon code verbatim: "${input.couponCode}"
-- Format it clearly, e.g. "Code: ${input.couponCode}".
+      typeRules = `SMS type: Deposit coupon offer.
+- MUST include the coupon value verbatim: ${input.couponCode}
+- Mention it naturally, e.g. "use ${input.couponCode}", "with ${input.couponCode}", "try ${input.couponCode}", or just "${input.couponCode}".
+- NEVER write the word "code" before or after it. Do NOT write "Code: ${input.couponCode}", "promo code ${input.couponCode}", or "use code ${input.couponCode}".
 - Bonus description: ${input.bonusDescription || "(none)"}
-- The user gets the bonus by depositing with this code.`;
+- The user gets the bonus by depositing with this value.`;
       break;
     case "deposit_bonus":
       typeRules = `SMS type: ${input.depositOrdinal} deposit bonus.
 - Mention this is for their ${input.depositOrdinal} deposit.
 - Include the bonus value exactly as written: "${input.bonusAmount}"
-${input.couponCode ? `- Include the coupon code verbatim: "Code: ${input.couponCode}"` : ""}`;
+${input.couponCode ? `- Include the coupon value verbatim: ${input.couponCode}. Mention it naturally, e.g. "use ${input.couponCode}" or "with ${input.couponCode}". NEVER write the word "code" before or after it.` : ""}`;
       break;
     case "signup_promo":
-      typeRules = `SMS type: Signup promo code.
-- MUST include the promo code verbatim: "${input.promoCode}"
-- Format it clearly, e.g. "Code: ${input.promoCode}".
-- Reward on signup: ${input.freePlayReward || "free play"}
-- Tell them to use the code when signing up.`;
+      typeRules = `SMS type: Signup promo offer.
+- MUST include the promo value verbatim: ${input.promoCode}
+- Mention it naturally at signup, e.g. "use ${input.promoCode} when you sign up", "sign up with ${input.promoCode}", "enter ${input.promoCode} on signup".
+- NEVER write the word "code" before or after it. Do NOT write "promo code ${input.promoCode}" or "use code ${input.promoCode}".
+- Reward on signup: ${input.freePlayReward || "free play"}`;
       break;
   }
 
