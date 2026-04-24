@@ -152,7 +152,13 @@ HARD RULES (apply to all six variants):
 - No urgency pressure ("hurry", "last chance", "expires today", etc.).
 - No marketing voice. No "exclusive", no "limited", no "amazing".
 - No greetings like "Dear customer". No formal sign-offs.
-${userCodes.length > 0 ? `- The user-provided code(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "code: ${userCodes[0]}" — not as a yelling promo banner.` : ""}
+- NEVER use the literal English word "code" (or "promo code", "coupon code", "use code", "with code", "enter code"). It is a US carrier spam trigger. Refer to any code value DIRECTLY by name only — e.g. "use WELCOME50", "with WELCOME50", "try WELCOME50", or just "WELCOME50".
+${userCodes.length > 0 ? `- The user-provided value(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "with ${userCodes[0]}" — never preceded or followed by the word "code".` : ""}
+
+DIVERSITY RULES (critical — applies across the six variants):
+- No two variants may start with the same first word. Six variants → six different opening words.
+- Do NOT overuse "ngl". At most ONE variant across all six may use "ngl", and only if it genuinely fits — preferably none use it.
+- Vary sentence shape across casual variants: don't make all three lowercase-only, don't make all three start with an interjection, don't reuse the same opener pattern twice.
 
 VARIANTS — return SIX messages, all conveying the same offer and code/value.
 
@@ -161,15 +167,15 @@ The first three are STANDARD style — clean, professional, brand-safe SMS copy.
 - "standardA": informative angle. Lead with what they get. Direct and clear.
 - "standardB": benefit-led angle. Lead with the outcome or feeling. Still polished.
 
-The last three are CASUAL style — daily US text-message tone using the VOICE rules above (lowercase ok, slang ok, sentence fragments ok, curiosity hooks).
-- "casualA": curiosity hook. Make them wonder what's behind the link without giving everything away. Something like "okay this is actually pretty wild...", "you're gonna want to see this", "saw this and thought of you", "ngl this looks legit".
-- "casualB": friend-recommendation style. Reads like a buddy forwarding something. Something like "heads up — this one's worth a look", "thought you'd want to know about this", "btw this just dropped".
-- "casualC": casual heads-up / FYI style. Short, low-key, like a quick text from a friend. Something like "fyi this is live now", "quick one for you", "real quick — saw this for you", "k so this just popped up".
+The last three are CASUAL style — daily US text-message tone using the VOICE rules above (lowercase ok, slang ok, sentence fragments ok, curiosity hooks). Each casual variant has its OWN opener pool — pick from its pool, do not borrow from another variant's pool:
+- "casualA": curiosity hook. Opener pool: "okay so...", "wait —", "you're gonna want to see this", "this is kinda wild", "hold up", "saw this and thought of you", "this looks legit". Make them wonder what's behind the offer without giving everything away.
+- "casualB": friend-recommendation style. Opener pool: "heads up —", "thought you'd want this", "passing this along", "worth a peek", "this one's for you", "buddy this just dropped". Reads like a friend forwarding something.
+- "casualC": casual heads-up / FYI style. Opener pool: "fyi", "quick one", "real quick", "psst", "just dropped", "live now", "k so this just popped up". Short, low-key, like a quick text from a friend.
 
-Rules for ALL five variants:
+Rules for ALL six variants:
 - Same offer. Same code/value if applicable.
 - Noticeably different wording, sentence shape, and opener so carriers don't dedupe on bulk send.
-- Every variant must follow ALL rules above and end with the link.
+- Every variant must follow ALL rules above${input.ctaLink && input.ctaLink.trim() ? " and end with the link" : ""}.
 
 Return your answer using the provided tool.`;
 }
