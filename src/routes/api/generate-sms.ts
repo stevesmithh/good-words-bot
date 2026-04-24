@@ -258,17 +258,17 @@ export const Route = createFileRoute("/api/generate-sms")({
                         casualA: {
                           type: "string",
                           description:
-                            "Casual variant A — daily US text style, curiosity hook. Lowercase / slang allowed. Link at end.",
+                            "Casual variant A — daily US text style, curiosity hook. Pick opener from: 'okay so', 'wait —', 'you're gonna want to see this', 'this is kinda wild', 'hold up', 'saw this and thought of you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                         casualB: {
                           type: "string",
                           description:
-                            "Casual variant B — daily US text style, friend-recommendation tone. Lowercase / slang allowed. Link at end.",
+                            "Casual variant B — daily US text style, friend-recommendation tone. Pick opener from: 'heads up —', 'thought you'd want this', 'passing this along', 'worth a peek', 'this one's for you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                         casualC: {
                           type: "string",
                           description:
-                            "Casual variant C — daily US text style, low-key heads-up / FYI tone. Lowercase / slang allowed. Link at end.",
+                            "Casual variant C — daily US text style, low-key FYI tone. Pick opener from: 'fyi', 'quick one', 'real quick', 'psst', 'just dropped', 'live now', 'k so this just popped up'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                       },
                       required: ["message", "standardA", "standardB", "casualA", "casualB", "casualC"],
