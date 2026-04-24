@@ -59,6 +59,13 @@ function buildPrompt(input: SmsBody) {
     forbiddenSet.delete(code.toLowerCase());
   }
 
+  // The literal English word "code" is a US carrier spam trigger — always forbid it,
+  // independent of category toggles. The code VALUE (e.g. WELCOME50) is still allowed.
+  forbiddenSet.add("code");
+  forbiddenSet.add("promo code");
+  forbiddenSet.add("coupon code");
+  forbiddenSet.add("use code");
+
   const forbiddenList = Array.from(forbiddenSet).join(", ");
   const replacementLines = Object.entries(SMS_SAFE_REPLACEMENTS)
     .map(([from, to]) => `- "${from}" → "${to}"`)
@@ -72,24 +79,25 @@ function buildPrompt(input: SmsBody) {
       typeRules = `SMS type: Promotional message. Just describe the offer briefly.`;
       break;
     case "deposit_coupon":
-      typeRules = `SMS type: Deposit coupon code.
-- MUST include the coupon code verbatim: "${input.couponCode}"
-- Format it clearly, e.g. "Code: ${input.couponCode}".
+      typeRules = `SMS type: Deposit coupon offer.
+- MUST include the coupon value verbatim: ${input.couponCode}
+- Mention it naturally, e.g. "use ${input.couponCode}", "with ${input.couponCode}", "try ${input.couponCode}", or just "${input.couponCode}".
+- NEVER write the word "code" before or after it. Do NOT write "Code: ${input.couponCode}", "promo code ${input.couponCode}", or "use code ${input.couponCode}".
 - Bonus description: ${input.bonusDescription || "(none)"}
-- The user gets the bonus by depositing with this code.`;
+- The user gets the bonus by depositing with this value.`;
       break;
     case "deposit_bonus":
       typeRules = `SMS type: ${input.depositOrdinal} deposit bonus.
 - Mention this is for their ${input.depositOrdinal} deposit.
 - Include the bonus value exactly as written: "${input.bonusAmount}"
-${input.couponCode ? `- Include the coupon code verbatim: "Code: ${input.couponCode}"` : ""}`;
+${input.couponCode ? `- Include the coupon value verbatim: ${input.couponCode}. Mention it naturally, e.g. "use ${input.couponCode}" or "with ${input.couponCode}". NEVER write the word "code" before or after it.` : ""}`;
       break;
     case "signup_promo":
-      typeRules = `SMS type: Signup promo code.
-- MUST include the promo code verbatim: "${input.promoCode}"
-- Format it clearly, e.g. "Code: ${input.promoCode}".
-- Reward on signup: ${input.freePlayReward || "free play"}
-- Tell them to use the code when signing up.`;
+      typeRules = `SMS type: Signup promo offer.
+- MUST include the promo value verbatim: ${input.promoCode}
+- Mention it naturally at signup, e.g. "use ${input.promoCode} when you sign up", "sign up with ${input.promoCode}", "enter ${input.promoCode} on signup".
+- NEVER write the word "code" before or after it. Do NOT write "promo code ${input.promoCode}" or "use code ${input.promoCode}".
+- Reward on signup: ${input.freePlayReward || "free play"}`;
       break;
   }
 
@@ -110,7 +118,7 @@ LENGTH: ${lengthRule}
 
 VOICE — DAILY US TEXT MESSAGE:
 - Write the way Americans actually text each other. Loose, casual, conversational.
-- Use everyday spoken phrases: "hey", "btw", "ngl", "fyi", "heads up", "quick one", "sooo", "k so", "real quick", "just dropped", "saw this and thought of you", "thought you'd want to know", "okay this is actually pretty cool".
+- Use everyday spoken phrases drawn from a wide pool: "hey", "btw", "fyi", "heads up", "quick one", "sooo", "k so", "real quick", "just dropped", "saw this and thought of you", "thought you'd want to know", "okay this is actually pretty cool", "wait —", "psst", "hold up", "passing this along", "worth a peek".
 - Lowercase is fine and often better than perfect capitalization. Sentence fragments are fine.
 - Light, natural punctuation only. A single "..." or "?" is great. No "!!!", no double punctuation, no emoji spam.
 - One small emoji is OK if it fits naturally (👀 🎯 🤝 🎁 🍀). Never more than one. Often none is best.
@@ -144,7 +152,13 @@ HARD RULES (apply to all six variants):
 - No urgency pressure ("hurry", "last chance", "expires today", etc.).
 - No marketing voice. No "exclusive", no "limited", no "amazing".
 - No greetings like "Dear customer". No formal sign-offs.
-${userCodes.length > 0 ? `- The user-provided code(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "code: ${userCodes[0]}" — not as a yelling promo banner.` : ""}
+- NEVER use the literal English word "code" (or "promo code", "coupon code", "use code", "with code", "enter code"). It is a US carrier spam trigger. Refer to any code value DIRECTLY by name only — e.g. "use WELCOME50", "with WELCOME50", "try WELCOME50", or just "WELCOME50".
+${userCodes.length > 0 ? `- The user-provided value(s) ${userCodes.map((c) => `"${c}"`).join(", ")} MUST appear verbatim. They are ALWAYS allowed even if they resemble forbidden words. Mention them naturally, e.g. "use ${userCodes[0]}" or "with ${userCodes[0]}" — never preceded or followed by the word "code".` : ""}
+
+DIVERSITY RULES (critical — applies across the six variants):
+- No two variants may start with the same first word. Six variants → six different opening words.
+- Do NOT overuse "ngl". At most ONE variant across all six may use "ngl", and only if it genuinely fits — preferably none use it.
+- Vary sentence shape across casual variants: don't make all three lowercase-only, don't make all three start with an interjection, don't reuse the same opener pattern twice.
 
 VARIANTS — return SIX messages, all conveying the same offer and code/value.
 
@@ -153,15 +167,15 @@ The first three are STANDARD style — clean, professional, brand-safe SMS copy.
 - "standardA": informative angle. Lead with what they get. Direct and clear.
 - "standardB": benefit-led angle. Lead with the outcome or feeling. Still polished.
 
-The last three are CASUAL style — daily US text-message tone using the VOICE rules above (lowercase ok, slang ok, sentence fragments ok, curiosity hooks).
-- "casualA": curiosity hook. Make them wonder what's behind the link without giving everything away. Something like "okay this is actually pretty wild...", "you're gonna want to see this", "saw this and thought of you", "ngl this looks legit".
-- "casualB": friend-recommendation style. Reads like a buddy forwarding something. Something like "heads up — this one's worth a look", "thought you'd want to know about this", "btw this just dropped".
-- "casualC": casual heads-up / FYI style. Short, low-key, like a quick text from a friend. Something like "fyi this is live now", "quick one for you", "real quick — saw this for you", "k so this just popped up".
+The last three are CASUAL style — daily US text-message tone using the VOICE rules above (lowercase ok, slang ok, sentence fragments ok, curiosity hooks). Each casual variant has its OWN opener pool — pick from its pool, do not borrow from another variant's pool:
+- "casualA": curiosity hook. Opener pool: "okay so...", "wait —", "you're gonna want to see this", "this is kinda wild", "hold up", "saw this and thought of you", "this looks legit". Make them wonder what's behind the offer without giving everything away.
+- "casualB": friend-recommendation style. Opener pool: "heads up —", "thought you'd want this", "passing this along", "worth a peek", "this one's for you", "buddy this just dropped". Reads like a friend forwarding something.
+- "casualC": casual heads-up / FYI style. Opener pool: "fyi", "quick one", "real quick", "psst", "just dropped", "live now", "k so this just popped up". Short, low-key, like a quick text from a friend.
 
-Rules for ALL five variants:
+Rules for ALL six variants:
 - Same offer. Same code/value if applicable.
 - Noticeably different wording, sentence shape, and opener so carriers don't dedupe on bulk send.
-- Every variant must follow ALL rules above and end with the link.
+- Every variant must follow ALL rules above${input.ctaLink && input.ctaLink.trim() ? " and end with the link" : ""}.
 
 Return your answer using the provided tool.`;
 }
@@ -244,17 +258,17 @@ export const Route = createFileRoute("/api/generate-sms")({
                         casualA: {
                           type: "string",
                           description:
-                            "Casual variant A — daily US text style, curiosity hook. Lowercase / slang allowed. Link at end.",
+                            "Casual variant A — daily US text style, curiosity hook. Pick opener from: 'okay so', 'wait —', 'you're gonna want to see this', 'this is kinda wild', 'hold up', 'saw this and thought of you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                         casualB: {
                           type: "string",
                           description:
-                            "Casual variant B — daily US text style, friend-recommendation tone. Lowercase / slang allowed. Link at end.",
+                            "Casual variant B — daily US text style, friend-recommendation tone. Pick opener from: 'heads up —', 'thought you'd want this', 'passing this along', 'worth a peek', 'this one's for you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                         casualC: {
                           type: "string",
                           description:
-                            "Casual variant C — daily US text style, low-key heads-up / FYI tone. Lowercase / slang allowed. Link at end.",
+                            "Casual variant C — daily US text style, low-key FYI tone. Pick opener from: 'fyi', 'quick one', 'real quick', 'psst', 'just dropped', 'live now', 'k so this just popped up'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                         },
                       },
                       required: ["message", "standardA", "standardB", "casualA", "casualB", "casualC"],
