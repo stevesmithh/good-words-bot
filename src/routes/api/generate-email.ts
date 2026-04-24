@@ -201,6 +201,20 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
+          // Normalize escaped newlines/tabs that some models emit as literal "\n" text
+          const normalizeNewlines = (s: string) =>
+            s
+              .replace(/\\r\\n/g, "\n")
+              .replace(/\\n/g, "\n")
+              .replace(/\\t/g, "\t");
+
+          parsed = {
+            subject: parsed.subject,
+            preview: parsed.preview,
+            header: parsed.header,
+            body: normalizeNewlines(parsed.body),
+          };
+
           return Response.json(parsed);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
