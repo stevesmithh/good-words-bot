@@ -59,6 +59,13 @@ function buildPrompt(input: SmsBody) {
     forbiddenSet.delete(code.toLowerCase());
   }
 
+  // The literal English word "code" is a US carrier spam trigger — always forbid it,
+  // independent of category toggles. The code VALUE (e.g. WELCOME50) is still allowed.
+  forbiddenSet.add("code");
+  forbiddenSet.add("promo code");
+  forbiddenSet.add("coupon code");
+  forbiddenSet.add("use code");
+
   const forbiddenList = Array.from(forbiddenSet).join(", ");
   const replacementLines = Object.entries(SMS_SAFE_REPLACEMENTS)
     .map(([from, to]) => `- "${from}" → "${to}"`)
