@@ -118,7 +118,7 @@ LENGTH: ${lengthRule}
 
 VOICE — DAILY US TEXT MESSAGE:
 - Write the way Americans actually text each other. Loose, casual, conversational.
-- Use everyday spoken phrases: "hey", "btw", "ngl", "fyi", "heads up", "quick one", "sooo", "k so", "real quick", "just dropped", "saw this and thought of you", "thought you'd want to know", "okay this is actually pretty cool".
+- Use everyday spoken phrases drawn from a wide pool: "hey", "btw", "fyi", "heads up", "quick one", "sooo", "k so", "real quick", "just dropped", "saw this and thought of you", "thought you'd want to know", "okay this is actually pretty cool", "wait —", "psst", "hold up", "passing this along", "worth a peek".
 - Lowercase is fine and often better than perfect capitalization. Sentence fragments are fine.
 - Light, natural punctuation only. A single "..." or "?" is great. No "!!!", no double punctuation, no emoji spam.
 - One small emoji is OK if it fits naturally (👀 🎯 🤝 🎁 🍀). Never more than one. Often none is best.
