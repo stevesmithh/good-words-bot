@@ -12,17 +12,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCatalog, type Site, type Promotion, type Provider } from "@/lib/catalog";
 
-const ADMIN_CODE = "2026";
-const SESSION_KEY = "admin_unlocked_2026";
+const SESSION_KEY = "admin_code";
+
+function getStoredCode(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(SESSION_KEY);
+}
 
 async function api(action: string, payload: Record<string, unknown>) {
+  const code = getStoredCode();
+  if (!code) throw new Error("Not authenticated");
   const res = await fetch("/api/admin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, code: ADMIN_CODE, ...payload }),
+    body: JSON.stringify({ action, code, ...payload }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    if (res.status === 401) {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+    throw new Error(data?.error || `Request failed (${res.status})`);
+  }
   return data;
 }
 
@@ -31,9 +42,7 @@ export function AdminButton() {
   const [unlocked, setUnlocked] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY) === "1") {
-      setUnlocked(true);
-    }
+    if (getStoredCode()) setUnlocked(true);
   }, []);
 
   return (
@@ -51,10 +60,7 @@ export function AdminButton() {
       {open && !unlocked && (
         <CodeDialog
           onClose={() => setOpen(false)}
-          onUnlock={() => {
-            sessionStorage.setItem(SESSION_KEY, "1");
-            setUnlocked(true);
-          }}
+          onUnlock={() => setUnlocked(true)}
         />
       )}
       {open && unlocked && <EditorDialog onClose={() => setOpen(false)} />}
@@ -65,13 +71,29 @@ export function AdminButton() {
 function CodeDialog({ onClose, onUnlock }: { onClose: () => void; onUnlock: () => void }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code === ADMIN_CODE) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", code }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || "Wrong code");
+        return;
+      }
+      sessionStorage.setItem(SESSION_KEY, code);
       onUnlock();
-    } else {
-      setError("Wrong code");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -82,14 +104,12 @@ function CodeDialog({ onClose, onUnlock }: { onClose: () => void; onUnlock: () =
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-4 w-4" /> Admin Access
           </DialogTitle>
-          <DialogDescription>Enter the 4-digit access code.</DialogDescription>
+          <DialogDescription>Enter the access code.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <Input
             autoFocus
             type="password"
-            inputMode="numeric"
-            maxLength={4}
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
@@ -99,8 +119,8 @@ function CodeDialog({ onClose, onUnlock }: { onClose: () => void; onUnlock: () =
             className="text-center text-2xl tracking-[0.5em]"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={code.length !== 4}>
-            Unlock
+          <Button type="submit" className="w-full" disabled={code.length === 0 || busy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Unlock"}
           </Button>
         </form>
       </DialogContent>
