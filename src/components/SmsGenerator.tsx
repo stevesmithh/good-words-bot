@@ -30,15 +30,17 @@ import {
   SMS_SPAM_CATEGORIES,
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
-import {
-  PROMOTIONS,
-  SITES,
-  SMS_PROVIDERS,
-  getPromotionsBySite,
-  type Promotion,
-  type SiteId,
-  type SmsProvider,
-} from "@/lib/promotions";
+import { useCatalog } from "@/lib/catalog";
+
+type SiteId = string;
+type SmsProvider = string;
+type Promotion = {
+  id: string;
+  site_id: string;
+  name: string;
+  destination_url: string;
+  short_domain_override: string | null;
+};
 
 type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
