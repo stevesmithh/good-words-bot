@@ -35,6 +35,7 @@ type EmailResult = {
   preview: string;
   header: string;
   body: string;
+  cta: string;
 };
 
 export function EmailGenerator() {
@@ -117,7 +118,7 @@ export function EmailGenerator() {
 
   const fullEmail = useMemo(() => {
     if (!result) return "";
-    return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}`;
+    return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}\n\nCTA Button: ${result.cta}`;
   }, [result]);
 
   return (
@@ -273,7 +274,7 @@ export function EmailGenerator() {
               value={result.preview}
               onCopy={() => copy(result.preview, "Preview")}
               count={result.preview.length}
-              limit={90}
+              limit={50}
             />
             <OutputCard
               title="Header"
@@ -285,6 +286,13 @@ export function EmailGenerator() {
               value={result.body}
               onCopy={() => copy(result.body, "Body")}
               multiline
+            />
+            <OutputCard
+              title="CTA button"
+              value={result.cta}
+              onCopy={() => copy(result.cta, "CTA")}
+              count={result.cta.length}
+              limit={24}
             />
             <Button
               variant="secondary"
