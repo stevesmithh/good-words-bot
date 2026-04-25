@@ -207,7 +207,7 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
-          let parsed: { subject: string; preview: string; header: string; body: string };
+          let parsed: { subject: string; preview: string; header: string; body: string; cta: string };
           try {
             parsed = JSON.parse(argsStr);
           } catch {
@@ -229,6 +229,7 @@ export const Route = createFileRoute("/api/generate-email")({
             preview: parsed.preview,
             header: parsed.header,
             body: normalizeNewlines(parsed.body),
+            cta: parsed.cta,
           };
 
           return Response.json(parsed);
