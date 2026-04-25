@@ -63,6 +63,7 @@ async function createShortioLink(opts: {
       originalURL: opts.destinationUrl,
       domain: opts.domain,
       allowDuplicates: true,
+      tags: ["sms"],
     }),
   });
 
