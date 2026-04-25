@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sms_short_links: {
+        Row: {
+          created_at: string
+          destination_url: string
+          id: string
+          promotion_id: string
+          provider: string
+          short_domain: string
+          short_url: string
+          shortio_id: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          destination_url: string
+          id?: string
+          promotion_id: string
+          provider: string
+          short_domain: string
+          short_url: string
+          shortio_id: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          destination_url?: string
+          id?: string
+          promotion_id?: string
+          provider?: string
+          short_domain?: string
+          short_url?: string
+          shortio_id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
