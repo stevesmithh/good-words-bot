@@ -121,7 +121,10 @@ export const Route = createFileRoute("/api/shortio")({
               .select("name")
               .eq("name", body.provider)
               .maybeSingle();
-            if (provErr) return Response.json({ error: provErr.message }, { status: 500 });
+            if (provErr) {
+              console.error("[shortio] provider lookup error:", provErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
+            }
             if (!providerRow) {
               return Response.json({ error: "Invalid provider" }, { status: 400 });
             }
@@ -132,7 +135,10 @@ export const Route = createFileRoute("/api/shortio")({
               .select("id, destination_url, short_domain_override, sites(short_domain)")
               .eq("id", body.promotionId)
               .maybeSingle();
-            if (promoErr) return Response.json({ error: promoErr.message }, { status: 500 });
+            if (promoErr) {
+              console.error("[shortio] promotion lookup error:", promoErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
+            }
             if (!promo) {
               return Response.json({ error: "Unknown promotion" }, { status: 400 });
             }
