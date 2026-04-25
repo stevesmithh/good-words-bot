@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiShortioRouteImport } from './routes/api/shortio'
 import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
 import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShortioRoute = ApiShortioRouteImport.update({
+  id: '/api/shortio',
+  path: '/api/shortio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateSmsRoute = ApiGenerateSmsRouteImport.update({
@@ -33,30 +39,39 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
+  '/api/shortio': typeof ApiShortioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
+  '/api/shortio': typeof ApiShortioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
+  '/api/shortio': typeof ApiShortioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/generate-email' | '/api/generate-sms'
+  fullPaths: '/' | '/api/generate-email' | '/api/generate-sms' | '/api/shortio'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/generate-email' | '/api/generate-sms'
-  id: '__root__' | '/' | '/api/generate-email' | '/api/generate-sms'
+  to: '/' | '/api/generate-email' | '/api/generate-sms' | '/api/shortio'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/generate-email'
+    | '/api/generate-sms'
+    | '/api/shortio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
   ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
+  ApiShortioRoute: typeof ApiShortioRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +81,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/shortio': {
+      id: '/api/shortio'
+      path: '/api/shortio'
+      fullPath: '/api/shortio'
+      preLoaderRoute: typeof ApiShortioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-sms': {
@@ -89,7 +111,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,
   ApiGenerateSmsRoute: ApiGenerateSmsRoute,
+  ApiShortioRoute: ApiShortioRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
