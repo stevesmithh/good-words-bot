@@ -17,23 +17,14 @@ type Body = GetOrCreateBody | MarkUsedBody;
 
 const VALID_PROVIDERS = new Set(["SMSEdge", "Dexatel", "Laaffic"]);
 
-// Readable random slug, e.g. "swift-otter-42"
-const SLUG_ADJ = [
-  "swift", "lucky", "bold", "sunny", "wild", "calm", "neon", "royal",
-  "shiny", "brisk", "cosmic", "vivid", "merry", "spicy", "smooth", "happy",
-  "zesty", "crisp", "bright", "frosty", "lively", "noble", "rapid", "sleek",
-];
-const SLUG_NOUN = [
-  "otter", "tiger", "panda", "comet", "wave", "spark", "flame", "river",
-  "echo", "moon", "star", "leaf", "fox", "bolt", "drift", "rocket",
-  "ember", "falcon", "willow", "harbor", "summit", "atlas", "orbit", "raven",
-];
-
+// Random alphanumeric slug, e.g. "o96f88"
 function randomSlug() {
-  const a = SLUG_ADJ[Math.floor(Math.random() * SLUG_ADJ.length)];
-  const n = SLUG_NOUN[Math.floor(Math.random() * SLUG_NOUN.length)];
-  const num = Math.floor(Math.random() * 100);
-  return `${a}-${n}-${num}`;
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
 }
 
 function buildUtmUrl(destinationUrl: string, provider: string, campaignSlug: string): string {
