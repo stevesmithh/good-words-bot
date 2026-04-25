@@ -136,9 +136,15 @@ export const Route = createFileRoute("/api/shortio")({
               return Response.json({ error: "Unknown promotion" }, { status: 400 });
             }
 
-            const siteRel = promo.sites as { short_domain: string } | null;
+            const siteRel = promo.sites as unknown as
+              | { short_domain: string }
+              | { short_domain: string }[]
+              | null;
+            const siteShortDomain = Array.isArray(siteRel)
+              ? siteRel[0]?.short_domain
+              : siteRel?.short_domain;
             const shortDomain =
-              (promo.short_domain_override as string | null) || siteRel?.short_domain;
+              (promo.short_domain_override as string | null) || siteShortDomain;
             if (!shortDomain) {
               return Response.json(
                 { error: "Site has no short domain configured" },
