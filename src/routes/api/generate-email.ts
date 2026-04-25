@@ -103,6 +103,20 @@ export const Route = createFileRoute("/api/generate-email")({
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
 
+          // Length caps to prevent oversized prompt abuse
+          if (body.offerDetails.length > 2000) {
+            return Response.json({ error: "Offer details must be 2000 chars or less." }, { status: 400 });
+          }
+          if (
+            (body.brandName && body.brandName.length > 200) ||
+            (body.extraForbidden && body.extraForbidden.length > 1000)
+          ) {
+            return Response.json({ error: "One or more fields exceed the allowed length." }, { status: 400 });
+          }
+          if (Array.isArray(body.activeCategories) && body.activeCategories.length > 50) {
+            return Response.json({ error: "Too many categories." }, { status: 400 });
+          }
+
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) {
             return Response.json(

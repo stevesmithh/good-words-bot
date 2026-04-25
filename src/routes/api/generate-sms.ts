@@ -190,6 +190,29 @@ export const Route = createFileRoute("/api/generate-sms")({
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
+
+          // Length caps to prevent oversized prompt abuse
+          const tooLong = (s: string | undefined, max: number) =>
+            typeof s === "string" && s.length > max;
+          if (tooLong(body.offerDetails, 2000)) {
+            return Response.json({ error: "Offer details must be 2000 chars or less." }, { status: 400 });
+          }
+          if (
+            tooLong(body.brandName, 200) ||
+            tooLong(body.couponCode, 100) ||
+            tooLong(body.promoCode, 100) ||
+            tooLong(body.bonusAmount, 100) ||
+            tooLong(body.bonusDescription, 500) ||
+            tooLong(body.freePlayReward, 200) ||
+            tooLong(body.extraForbidden, 1000) ||
+            tooLong(body.ctaLink, 500)
+          ) {
+            return Response.json({ error: "One or more fields exceed the allowed length." }, { status: 400 });
+          }
+          if (Array.isArray(body.activeCategories) && body.activeCategories.length > 50) {
+            return Response.json({ error: "Too many categories." }, { status: 400 });
+          }
+
           if (body.ctaLink && body.ctaLink.trim()) {
             try {
               new URL(body.ctaLink);
