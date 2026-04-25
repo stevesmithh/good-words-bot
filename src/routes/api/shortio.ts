@@ -99,7 +99,8 @@ export const Route = createFileRoute("/api/shortio")({
               .update({ used_at: new Date().toISOString() })
               .eq("id", body.linkId);
             if (error) {
-              return Response.json({ error: error.message }, { status: 500 });
+              console.error("[shortio] mark-used error:", error);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
             }
             return Response.json({ success: true });
           }
@@ -120,7 +121,10 @@ export const Route = createFileRoute("/api/shortio")({
               .select("name")
               .eq("name", body.provider)
               .maybeSingle();
-            if (provErr) return Response.json({ error: provErr.message }, { status: 500 });
+            if (provErr) {
+              console.error("[shortio] provider lookup error:", provErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
+            }
             if (!providerRow) {
               return Response.json({ error: "Invalid provider" }, { status: 400 });
             }
@@ -131,7 +135,10 @@ export const Route = createFileRoute("/api/shortio")({
               .select("id, destination_url, short_domain_override, sites(short_domain)")
               .eq("id", body.promotionId)
               .maybeSingle();
-            if (promoErr) return Response.json({ error: promoErr.message }, { status: 500 });
+            if (promoErr) {
+              console.error("[shortio] promotion lookup error:", promoErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
+            }
             if (!promo) {
               return Response.json({ error: "Unknown promotion" }, { status: 400 });
             }
@@ -165,7 +172,8 @@ export const Route = createFileRoute("/api/shortio")({
               .limit(1);
 
             if (lookupErr) {
-              return Response.json({ error: lookupErr.message }, { status: 500 });
+              console.error("[shortio] lookup error:", lookupErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
             }
 
             if (existing && existing.length > 0) {
@@ -199,8 +207,8 @@ export const Route = createFileRoute("/api/shortio")({
                 slug,
               });
             } catch (err) {
-              const msg = err instanceof Error ? err.message : "short.io error";
-              return Response.json({ error: msg }, { status: 502 });
+              console.error("[shortio] short.io error:", err);
+              return Response.json({ error: "Failed to create short link" }, { status: 502 });
             }
 
             // 3. Save to DB
@@ -218,10 +226,8 @@ export const Route = createFileRoute("/api/shortio")({
               .single();
 
             if (insertErr || !inserted) {
-              return Response.json(
-                { error: insertErr?.message || "Failed to save link" },
-                { status: 500 },
-              );
+              console.error("[shortio] insert error:", insertErr);
+              return Response.json({ error: "Failed to save link" }, { status: 500 });
             }
 
             return Response.json({
@@ -234,8 +240,8 @@ export const Route = createFileRoute("/api/shortio")({
 
           return Response.json({ error: "Unknown action" }, { status: 400 });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Unknown error";
-          return Response.json({ error: message }, { status: 500 });
+          console.error("[shortio] handler error:", err);
+          return Response.json({ error: "Server error" }, { status: 500 });
         }
       },
     },
