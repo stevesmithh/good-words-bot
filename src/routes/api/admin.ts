@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMIN_CODE = "2026";
-
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,17 +22,90 @@ function asStr(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
+// Simple in-memory rate limiter (per IP). Best-effort — process-local.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 20;
+const FAIL_LIMIT_WINDOW_MS = 5 * 60_000;
+const FAIL_LIMIT_MAX = 10;
+const hits = new Map<string, number[]>();
+const fails = new Map<string, number[]>();
+
+function clientIp(request: Request): string {
+  const h = request.headers;
+  return (
+    h.get("cf-connecting-ip") ||
+    h.get("x-real-ip") ||
+    (h.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    "unknown"
+  );
+}
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const arr = (hits.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  arr.push(now);
+  hits.set(ip, arr);
+  return arr.length > RATE_LIMIT_MAX;
+}
+
+function tooManyFails(ip: string): boolean {
+  const now = Date.now();
+  const arr = (fails.get(ip) ?? []).filter((t) => now - t < FAIL_LIMIT_WINDOW_MS);
+  fails.set(ip, arr);
+  return arr.length >= FAIL_LIMIT_MAX;
+}
+
+function recordFail(ip: string) {
+  const now = Date.now();
+  const arr = (fails.get(ip) ?? []).filter((t) => now - t < FAIL_LIMIT_WINDOW_MS);
+  arr.push(now);
+  fails.set(ip, arr);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still compare to avoid early-exit timing leak on length
+    let diff = 1;
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+    }
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 export const Route = createFileRoute("/api/admin")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const ip = clientIp(request);
+          if (rateLimited(ip)) return bad("Too many requests", 429);
+          if (tooManyFails(ip)) return bad("Too many failed attempts. Try again later.", 429);
+
           const body = (await request.json()) as Body;
-          if (body.code !== ADMIN_CODE) return bad("Invalid admin code", 401);
+
+          const expected = process.env.ADMIN_ACCESS_CODE;
+          if (!expected) return bad("Admin access not configured", 500);
+
+          const provided = typeof body.code === "string" ? body.code : "";
+          if (!timingSafeEqual(provided, expected)) {
+            recordFail(ip);
+            return bad("Invalid admin code", 401);
+          }
 
           const supabase = getSupabaseAdmin();
 
           switch (body.action) {
+            case "verify": {
+              return Response.json({ success: true });
+            }
+
             case "upsertSite": {
               const id = asStr(body.id);
               const name = asStr(body.name);
