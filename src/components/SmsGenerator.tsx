@@ -93,10 +93,15 @@ export function SmsGenerator() {
     () => new Set(SMS_SPAM_CATEGORIES.map((c) => c.id)),
   );
 
-  // Site / promotion / provider
-  const [siteId, setSiteId] = useState<SiteId>("BitBetWin");
+  // Site / promotion / provider — driven by DB-backed catalog
+  const { data: catalog } = useCatalog();
+  const SITES = catalog?.sites ?? [];
+  const PROMOTIONS = catalog?.promotions ?? [];
+  const SMS_PROVIDERS = catalog?.providers ?? [];
+
+  const [siteId, setSiteId] = useState<SiteId>("");
   const [promotionId, setPromotionId] = useState<string>("");
-  const [provider, setProvider] = useState<SmsProvider>("SMSEdge");
+  const [provider, setProvider] = useState<SmsProvider>("");
 
   // Conditional fields
   const [couponCode, setCouponCode] = useState("");
@@ -113,11 +118,20 @@ export function SmsGenerator() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rawError, setRawError] = useState<string | null>(null);
 
-  const sitePromotions = useMemo(() => getPromotionsBySite(siteId), [siteId]);
+  // Initialize defaults once catalog loads
+  useEffect(() => {
+    if (!siteId && SITES.length > 0) setSiteId(SITES[0].id);
+    if (!provider && SMS_PROVIDERS.length > 0) setProvider(SMS_PROVIDERS[0].name);
+  }, [SITES, SMS_PROVIDERS, siteId, provider]);
+
+  const sitePromotions = useMemo(
+    () => PROMOTIONS.filter((p) => p.site_id === siteId),
+    [PROMOTIONS, siteId],
+  );
 
   // Auto-fill brand from site, and reset promotion when site changes
   useEffect(() => {
-    setBrandName(siteId);
+    if (siteId) setBrandName(siteId);
     if (!sitePromotions.find((p) => p.id === promotionId)) {
       setPromotionId(sitePromotions[0]?.id ?? "");
     }
@@ -125,7 +139,7 @@ export function SmsGenerator() {
 
   const selectedPromotion: Promotion | undefined = useMemo(
     () => PROMOTIONS.find((p) => p.id === promotionId),
-    [promotionId],
+    [PROMOTIONS, promotionId],
   );
 
   const toggleCategory = (id: SmsSpamCategoryId) => {
