@@ -1,92 +1,113 @@
+# Add short.io short links to SMS generator with reuse tracking
 
-# Add SMS Copy Generator (bulk SMS, US-focused)
+Each SMS generation picks a promotion (UTM) from a dropdown, gets a short.io short link for that UTM, appends the same link to all 6 variants, and tracks which variant the user actually used via a checkmark. Unused links are reused on the next generation for the same UTM until one is marked used.
 
-A second tool alongside the email generator for short bulk-SMS copy. Uses the same architecture: server route + Lovable AI Gateway + tool-calling for structured output.
+## What you'll need to give me
 
-## Navigation
+1. **The UTM list** — paste it in chat. Each entry needs:
+   - Promotion name (what shows in the dropdown, e.g. "Daily Wheel Spin")
+   - Full destination URL with UTM params (e.g. `https://site.com/promo?utm_source=sms&utm_campaign=wheel`)
+2. **Short.io API key** — I'll request it as a secret (not stored in code).
+3. **Short.io domain** — the branded domain you use in short.io (e.g. `yourbrand.short.gy`). If you only have one, I'll just hardcode it.
 
-Add a top-of-page tab switcher on `/` so the user can flip between **Email** and **SMS** without a full second route. Keeps the single-page, no-nav app structure intact.
+## How it will work end-to-end
 
 ```text
-[ Email ]  [ SMS ]
+User picks promotion from dropdown ──► Generate SMS
+                                        │
+                                        ▼
+                     Server checks Lovable Cloud DB:
+                       any UNUSED short link for this UTM?
+                                        │
+                          ┌─────────────┴─────────────┐
+                          │ YES                       │ NO
+                          ▼                           ▼
+                   Reuse that link            Call short.io API,
+                                              create new short link,
+                                              save to DB as "unused"
+                                        │
+                                        ▼
+                Append the SAME short link to all 6 variants
+                                        │
+                                        ▼
+                Each variant card shows a ✓ checkmark button
+                                        │
+                                        ▼
+                User clicks ✓ on the variant they sent
+                       → marks short link as "used" in DB
+                       → next generation creates a fresh link
+
+           If user generates again WITHOUT clicking any ✓:
+                       → same unused short link gets reused
+                         on the new batch (still 6 variants)
 ```
 
-## SMS form (left side)
+## UI changes
 
-- **SMS type** — 4 segmented buttons:
-  1. Promotional (no code)
-  2. Deposit coupon code
-  3. Deposit bonus (1st / 2nd / 3rd)
-  4. Signup promo code
-- **Conditional fields** based on type:
-  - *Deposit coupon code* → `Coupon code` text input (required), `Bonus description` (e.g. "100% up to $200")
-  - *Deposit bonus* → dropdown for "1st / 2nd / 3rd deposit", `Bonus amount or %` input, optional `Coupon code`
-  - *Signup promo code* → `Promo code` (required), `Free play reward` input
-  - *Promotional* → just the offer description
-- **Offer details** — short textarea, required (placeholder explains "what we are giving and any context")
-- **Audience** — New / Active / Inactive (same as email)
-- **Brand name** — optional
-- **CTA link** — required, the URL appended at the end (validated as URL). The model treats it as a token, never rewrites it.
-- **Length target** — radio: "Short (under 160 chars / 1 segment)" or "Standard (10–15 words + link)". Default: Short.
-- **Spam category toggles** — pill chips, all on by default (see categories below)
-- **Extra forbidden words** — comma-separated input
-- **Generate SMS** button
+**SMS form (left side)**
+- New required field at top: **Promotion** dropdown (lists all UTMs from the hardcoded list).
+- The existing "CTA link" field is removed for SMS — the short link is derived from the chosen promotion. (Email generator is untouched.)
 
-## SMS spam-word categories (US-focused)
+**SMS results (right side)**
+- Each of the 6 variant cards gets a new **green checkmark button** next to the copy button.
+- Clicking the checkmark:
+  - Marks that short link as "used" in the DB
+  - Visually fills the checkmark + disables it
+  - Shows a small "Used — next generation will create a new link" hint
+- A small badge under each card shows the short link and whether it's `Fresh` or `Reused from previous batch`.
 
-Stored in `src/lib/sms-spam-words.ts`. Built from the user's list plus standard US carrier (AT&T / Verizon / T-Mobile) filter triggers researched and added:
+## Technical pieces
 
-1. **Financial & payments** — payment, withdraw, usd, cash, payslip, debit card, chase, bank, wire, deposit*, payout, ach, zelle, venmo, paypal, account, credit, loan, refund, tax
-2. **Crypto** — coin, coinbase, btc, bitcoin, eth, crypto, wallet, blockchain, nft, token
-3. **Work / income bait** — job, remote, hiring, work from home, side hustle, earn, salary, payslip, profitable, base
-4. **Prizes & gambling** — sweepstakes, lottery, jackpot, winner, prize, casino, bet
-5. **Discounts & urgency** — reduction, discount, % off, sale, limited time, expires, act now, hurry, last chance, today only
-6. **Generic spam triggers** — click here, click link, free, congratulations, claim, verify, suspended, locked, alert, urgent, code (when not paired with the user's coupon/promo field)
-7. **Geography flags** — USA, US-only (carriers flag these in promotional context)
-8. **Formatting triggers** — ALL CAPS words, $$$, !!!, repeated punctuation
+**New files**
+- `src/lib/promotions.ts` — hardcoded array `[{ id, name, destinationUrl }]`. You'll send the list, I'll fill it in.
+- `src/routes/api/shortio.ts` — server route. Two handlers:
+  - `POST /api/shortio/get-or-create` — input: `{ promotionId }`. Looks up unused link in DB → reuses or creates via short.io API → returns `{ shortUrl, linkId, isReused }`.
+  - `POST /api/shortio/mark-used` — input: `{ linkId }`. Sets `used_at = now()` in DB.
 
-*Coupon/promo code values entered by the user are passed through as-is and explicitly marked safe in the prompt — they never get filtered.
+**Edited files**
+- `src/components/SmsGenerator.tsx` — add Promotion dropdown, remove CTA link input, fetch short link before calling generator, pass it to the API, render checkmark buttons + "fresh/reused" badge.
+- `src/routes/api/generate-sms.ts` — accept the resolved `shortUrl` from the client (it just appends it to each variant; logic already supports a CTA link).
 
-I'll also research current US SMS-spam trigger lists during build (web search) and merge anything common that isn't already covered.
+**Lovable Cloud (database)**
 
-## Output (right side)
+Enabling Lovable Cloud (free) for one table:
 
-Just two cards (SMS is short — no subject/preview/header):
+```sql
+create table public.sms_short_links (
+  id uuid primary key default gen_random_uuid(),
+  promotion_id text not null,
+  destination_url text not null,
+  short_url text not null,
+  shortio_id text not null,
+  created_at timestamptz not null default now(),
+  used_at timestamptz
+);
+create index on public.sms_short_links (promotion_id, used_at);
+```
 
-1. **SMS message** — full text including the link at the end
-   - Live character count + segment count (1 segment = 160 chars GSM, 2 = 306, 3 = 459)
-   - Color: green ≤160, amber 161–306, red >306
-   - Copy button
-2. **Variants** — 2 alternate phrasings of the same message so the team can A/B or rotate (helps avoid carrier dedupe filtering on bulk sends)
-   - Each with its own copy button
-   - Each with its own char/segment count
+No auth/RLS needed — internal tool, single user. Table is read/written only by server routes using the service role key.
 
-Plus a **Copy all variants** button.
+**Secret**
+- `SHORTIO_API_KEY` — added via the secrets tool after you confirm the key.
 
-## Prompt rules (server-side)
+## Edge cases handled
 
-- Max 15 words for the message text, link counted separately and appended at the end exactly as provided.
-- Single sentence or two short ones — natural human tone, no marketing voice.
-- Must include the coupon/promo code verbatim when provided, formatted clearly (e.g. `Code: WELCOME50`).
-- For deposit bonus: include the bonus value the user entered, as written.
-- Never use any forbidden word (active categories ∪ extras), but allow user-provided code values to pass.
-- No "click here", no "free", no all-caps words, no `!!!`, no `$$$`.
-- Link goes at the very end, preceded by a single space, no trailing punctuation.
-- Return three options via tool calling: `{ message, variantA, variantB }`.
+- **Short.io API down or returns error** → generation still works, falls back to the raw destination URL with a toast warning.
+- **DB has multiple unused links for the same UTM** (shouldn't happen, but possible if checkmark is never clicked across many sessions) → reuses the oldest unused one.
+- **User changes promotion mid-generation** → fresh fetch for the new promotion.
+- **Variant text already contains a link from a previous generation** → not an issue; we only append once at API-response time.
 
-## Files
+## What stays the same
 
-- **New**: `src/lib/sms-spam-words.ts` — categories + safe replacements
-- **New**: `src/routes/api/generate-sms.ts` — server route, tool-calling, same error handling pattern as email (429, 402, parse failures with raw collapsible)
-- **New**: `src/components/SmsGenerator.tsx` — the SMS form + output
-- **New**: `src/components/EmailGenerator.tsx` — extracted from current `index.tsx` (just a refactor — same code, same behavior)
-- **Edit**: `src/routes/index.tsx` — replace body with a Tabs (`Email` / `SMS`) wrapper that renders the two components. Header stays the same but title becomes "Copy Generator".
-- **Edit**: `src/routes/__root.tsx` — page title → "Copy Generator"
+- Email generator: untouched.
+- All existing SMS spam-word filtering, casual/standard variant logic, "no code word" rules: untouched.
+- Six-variant output, character/segment counts, copy buttons: untouched (just gain a checkmark sibling).
 
-## Error handling
+## Open thing I'll confirm before building
 
-Same as email: inline validation, toast on API errors, 429 / 402 friendly messages, collapsible raw response on parse failure.
+Once you paste the UTM list + short.io key + branded domain, I'll:
+1. Enable Lovable Cloud and create the `sms_short_links` table.
+2. Add the `SHORTIO_API_KEY` secret request.
+3. Implement the routes + UI changes above.
 
-## Result
-
-One page, two tabs. Email tool stays exactly as it is. SMS tool produces a tight 10–15 word message + the user's link, scrubbed of US carrier spam triggers, with two extra variants for rotation, plus full coupon/bonus/signup-code support.
+Approve this plan to switch into build mode, then send me the UTM list, short.io API key, and branded short.io domain.
