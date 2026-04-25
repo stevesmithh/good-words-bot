@@ -370,7 +370,7 @@ export function SmsGenerator() {
               )}
               {selectedPromotion && (
                 <p className="truncate text-xs text-muted-foreground">
-                  → {selectedPromotion.destinationUrl}
+                  → {selectedPromotion.destination_url}
                 </p>
               )}
             </div>
