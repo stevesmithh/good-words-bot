@@ -39,6 +39,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "description", content: "Copy Generator" },
       { name: "robots", content: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
       { name: "googlebot", content: "noindex, nofollow" },
+      { property: "og:title", content: "Copy Generator" },
+      { name: "twitter:title", content: "Copy Generator" },
+      { property: "og:description", content: "Copy Generator" },
+      { name: "twitter:description", content: "Copy Generator" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6d2641db-93bd-4632-873f-3db20f93c68f/id-preview-871fe43a--2d562399-d00f-40a5-a268-08657492d89d.lovable.app-1777087353474.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6d2641db-93bd-4632-873f-3db20f93c68f/id-preview-871fe43a--2d562399-d00f-40a5-a268-08657492d89d.lovable.app-1777087353474.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       {
