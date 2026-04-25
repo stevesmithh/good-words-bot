@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, MessageSquare, Sparkles, AlertCircle } from "lucide-react";
+import { Copy, Loader2, MessageSquare, Sparkles, AlertCircle, Check, Link2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,6 +30,15 @@ import {
   SMS_SPAM_CATEGORIES,
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
+import {
+  PROMOTIONS,
+  SITES,
+  SMS_PROVIDERS,
+  getPromotionsBySite,
+  type Promotion,
+  type SiteId,
+  type SmsProvider,
+} from "@/lib/promotions";
 
 type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
@@ -43,6 +52,13 @@ type SmsResult = {
   casualA: string;
   casualB: string;
   casualC: string;
+};
+
+type ShortLinkInfo = {
+  linkId: string;
+  shortUrl: string;
+  isReused: boolean;
+  used: boolean;
 };
 
 const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
@@ -69,12 +85,16 @@ export function SmsGenerator() {
   const [offerDetails, setOfferDetails] = useState("");
   const [audience, setAudience] = useState<Audience>("active");
   const [brandName, setBrandName] = useState("");
-  const [ctaLink, setCtaLink] = useState("");
   const [lengthTarget, setLengthTarget] = useState<LengthTarget>("short");
   const [extraForbidden, setExtraForbidden] = useState("");
   const [activeCategories, setActiveCategories] = useState<Set<SmsSpamCategoryId>>(
     () => new Set(SMS_SPAM_CATEGORIES.map((c) => c.id)),
   );
+
+  // Site / promotion / provider
+  const [siteId, setSiteId] = useState<SiteId>("BitBetWin");
+  const [promotionId, setPromotionId] = useState<string>("");
+  const [provider, setProvider] = useState<SmsProvider>("SMSEdge");
 
   // Conditional fields
   const [couponCode, setCouponCode] = useState("");
@@ -87,8 +107,24 @@ export function SmsGenerator() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SmsResult | null>(null);
+  const [shortLink, setShortLink] = useState<ShortLinkInfo | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rawError, setRawError] = useState<string | null>(null);
+
+  const sitePromotions = useMemo(() => getPromotionsBySite(siteId), [siteId]);
+
+  // Auto-fill brand from site, and reset promotion when site changes
+  useEffect(() => {
+    setBrandName(siteId);
+    if (!sitePromotions.find((p) => p.id === promotionId)) {
+      setPromotionId(sitePromotions[0]?.id ?? "");
+    }
+  }, [siteId, sitePromotions, promotionId]);
+
+  const selectedPromotion: Promotion | undefined = useMemo(
+    () => PROMOTIONS.find((p) => p.id === promotionId),
+    [promotionId],
+  );
 
   const toggleCategory = (id: SmsSpamCategoryId) => {
     setActiveCategories((prev) => {
@@ -102,13 +138,7 @@ export function SmsGenerator() {
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!offerDetails.trim()) e.offer = "Required.";
-    if (ctaLink.trim()) {
-      try {
-        new URL(ctaLink);
-      } catch {
-        e.link = "Must be a valid URL (https://…).";
-      }
-    }
+    if (!promotionId) e.promotion = "Pick a promotion.";
     if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
     if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
     if (smsType === "deposit_bonus" && !bonusAmount.trim()) e.bonus = "Required.";
@@ -122,14 +152,42 @@ export function SmsGenerator() {
     setRawError(null);
     setLoading(true);
     setResult(null);
+    setShortLink(null);
 
     try {
+      // 1. Get or create the short link first
+      const linkResp = await fetch("/api/shortio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "get-or-create",
+          promotionId,
+          provider,
+        }),
+      });
+      const linkData = await linkResp.json().catch(() => ({}));
+      if (!linkResp.ok) {
+        const msg = (linkData?.error as string) || `Short link error ${linkResp.status}`;
+        setErrorMsg(`Short link error: ${msg}`);
+        toast.error(msg);
+        return;
+      }
+
+      const link: ShortLinkInfo = {
+        linkId: linkData.linkId,
+        shortUrl: linkData.shortUrl,
+        isReused: !!linkData.isReused,
+        used: false,
+      };
+      setShortLink(link);
+
+      // 2. Generate the SMS using that short link as the CTA
       const payload: Record<string, unknown> = {
         smsType,
         offerDetails,
         audience,
         brandName: brandName.trim() || undefined,
-        ctaLink: ctaLink.trim() || undefined,
+        ctaLink: link.shortUrl,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
@@ -165,13 +223,34 @@ export function SmsGenerator() {
       }
 
       setResult(data as SmsResult);
-      toast.success("SMS generated");
+      toast.success(link.isReused ? "SMS generated (reused link)" : "SMS generated (new link)");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(message);
       toast.error(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkUsed = async () => {
+    if (!shortLink || shortLink.used) return;
+    try {
+      const resp = await fetch("/api/shortio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark-used", linkId: shortLink.linkId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        toast.error((data?.error as string) || "Failed to mark used");
+        return;
+      }
+      setShortLink({ ...shortLink, used: true });
+      toast.success("Marked as used — next generation will create a new link");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(message);
     }
   };
 
@@ -203,10 +282,84 @@ export function SmsGenerator() {
         <CardHeader>
           <CardTitle>SMS details</CardTitle>
           <CardDescription>
-            Short, US-carrier-friendly bulk SMS, link optional.
+            Pick a site + promotion. The short link is generated and tracked automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Site + Promotion + Provider */}
+          <div className="space-y-4 rounded-md border bg-muted/30 p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="site">
+                  Site <span className="text-destructive">*</span>
+                </Label>
+                <Select value={siteId} onValueChange={(v) => setSiteId(v as SiteId)}>
+                  <SelectTrigger id="site">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SITES.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="provider">
+                  SMS provider <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={provider}
+                  onValueChange={(v) => setProvider(v as SmsProvider)}
+                >
+                  <SelectTrigger id="provider">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SMS_PROVIDERS.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="promotion">
+                Promotion <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={promotionId}
+                onValueChange={(v) => {
+                  setPromotionId(v);
+                  if (errors.promotion) setErrors({ ...errors, promotion: "" });
+                }}
+              >
+                <SelectTrigger id="promotion" aria-invalid={!!errors.promotion}>
+                  <SelectValue placeholder="Pick a promotion" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {sitePromotions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.promotion && (
+                <p className="text-xs text-destructive">{errors.promotion}</p>
+              )}
+              {selectedPromotion && (
+                <p className="truncate text-xs text-muted-foreground">
+                  → {selectedPromotion.destinationUrl}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* SMS type segmented buttons */}
           <div className="space-y-2">
             <Label>SMS type</Label>
@@ -367,33 +520,14 @@ export function SmsGenerator() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="smsBrand">Brand name (optional)</Label>
+              <Label htmlFor="smsBrand">Brand name</Label>
               <Input
                 id="smsBrand"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
-                placeholder="Acme"
+                placeholder="Auto-filled from site"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="link">CTA link (optional)</Label>
-            <Input
-              id="link"
-              type="url"
-              value={ctaLink}
-              onChange={(e) => {
-                setCtaLink(e.target.value);
-                if (errors.link) setErrors({ ...errors, link: "" });
-              }}
-              placeholder="https://example.com/promo"
-              aria-invalid={!!errors.link}
-            />
-            {errors.link && <p className="text-xs text-destructive">{errors.link}</p>}
-            <p className="text-xs text-muted-foreground">
-              If provided, appended at the end exactly as entered. Leave empty for no link.
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -510,8 +644,28 @@ export function SmsGenerator() {
 
         {!loading && !result && !errorMsg && <SmsEmptyState />}
 
-        {result && (
+        {result && shortLink && (
           <>
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="flex flex-wrap items-center gap-3 py-3">
+                <Link2 className="h-4 w-4 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Short link {shortLink.isReused ? "(reused — not yet used)" : "(fresh)"}
+                  </p>
+                  <p className="truncate text-sm font-mono">{shortLink.shortUrl}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copy(shortLink.shortUrl, "Short link")}
+                  className="h-8 px-2"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </CardContent>
+            </Card>
+
             <div className="flex items-center gap-2 pt-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Standard
@@ -521,17 +675,23 @@ export function SmsGenerator() {
             <SmsCard
               title="Primary"
               value={result.message}
+              shortLink={shortLink}
               onCopy={() => copy(result.message, "Primary")}
+              onMarkUsed={handleMarkUsed}
             />
             <SmsCard
               title="Standard A"
               value={result.standardA}
+              shortLink={shortLink}
               onCopy={() => copy(result.standardA, "Standard A")}
+              onMarkUsed={handleMarkUsed}
             />
             <SmsCard
               title="Standard B"
               value={result.standardB}
+              shortLink={shortLink}
               onCopy={() => copy(result.standardB, "Standard B")}
+              onMarkUsed={handleMarkUsed}
             />
 
             <div className="flex items-center gap-2 pt-4">
@@ -543,17 +703,23 @@ export function SmsGenerator() {
             <SmsCard
               title="Casual A"
               value={result.casualA}
+              shortLink={shortLink}
               onCopy={() => copy(result.casualA, "Casual A")}
+              onMarkUsed={handleMarkUsed}
             />
             <SmsCard
               title="Casual B"
               value={result.casualB}
+              shortLink={shortLink}
               onCopy={() => copy(result.casualB, "Casual B")}
+              onMarkUsed={handleMarkUsed}
             />
             <SmsCard
               title="Casual C"
               value={result.casualC}
+              shortLink={shortLink}
               onCopy={() => copy(result.casualC, "Casual C")}
+              onMarkUsed={handleMarkUsed}
             />
 
             <Button
@@ -574,11 +740,15 @@ export function SmsGenerator() {
 function SmsCard({
   title,
   value,
+  shortLink,
   onCopy,
+  onMarkUsed,
 }: {
   title: string;
   value: string;
+  shortLink: ShortLinkInfo;
   onCopy: () => void;
+  onMarkUsed: () => void;
 }) {
   const { len, segments, color } = segmentInfo(value);
   return (
@@ -597,10 +767,29 @@ function SmsCard({
             {len} chars · {segments} segment{segments > 1 ? "s" : ""}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCopy} className="h-8 px-2">
-          <Copy className="h-3.5 w-3.5" />
-          Copy
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant={shortLink.used ? "default" : "outline"}
+            size="sm"
+            onClick={onMarkUsed}
+            disabled={shortLink.used}
+            className={cn(
+              "h-8 px-2",
+              shortLink.used && "bg-success text-success-foreground hover:bg-success",
+            )}
+            title={
+              shortLink.used
+                ? "Marked as used — next generation will create a new link"
+                : "Mark this as the variant you sent"
+            }
+          >
+            <Check className="h-3.5 w-3.5" />
+            {shortLink.used ? "Used" : "I sent this"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onCopy} className="h-8 px-2">
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
@@ -638,7 +827,7 @@ function SmsEmptyState() {
         </div>
         <p className="text-sm font-medium">Your SMS will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick the SMS type, fill in the offer, then click generate.
+          Pick the site, promotion and SMS provider, then click generate.
         </p>
       </CardContent>
     </Card>
