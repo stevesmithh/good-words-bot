@@ -112,10 +112,15 @@ export const Route = createFileRoute("/api/admin")({
               const short_domain = asStr(body.short_domain);
               if (!id || !name || !short_domain) return bad("id, name, short_domain required");
               if (!/^[a-zA-Z0-9_-]+$/.test(id)) return bad("Invalid id format");
+              if (id.length > 64 || name.length > 200 || short_domain.length > 253)
+                return bad("Field too long");
               const { error } = await supabase
                 .from("sites")
                 .upsert({ id, name, short_domain }, { onConflict: "id" });
-              if (error) return bad(error.message, 500);
+              if (error) {
+                console.error("[admin] upsertSite error:", error);
+                return bad("Database operation failed", 500);
+              }
               return Response.json({ success: true });
             }
 
@@ -123,7 +128,10 @@ export const Route = createFileRoute("/api/admin")({
               const id = asStr(body.id);
               if (!id) return bad("id required");
               const { error } = await supabase.from("sites").delete().eq("id", id);
-              if (error) return bad(error.message, 500);
+              if (error) {
+                console.error("[admin] deleteSite error:", error);
+                return bad("Database operation failed", 500);
+              }
               return Response.json({ success: true });
             }
 
@@ -138,13 +146,24 @@ export const Route = createFileRoute("/api/admin")({
                 return bad("id, site_id, name, destination_url required");
               }
               if (!/^[a-zA-Z0-9_-]+$/.test(id)) return bad("Invalid id format");
+              if (
+                id.length > 64 ||
+                site_id.length > 64 ||
+                name.length > 200 ||
+                destination_url.length > 2000 ||
+                (short_domain_override && short_domain_override.length > 253)
+              )
+                return bad("Field too long");
               const { error } = await supabase
                 .from("promotions")
                 .upsert(
                   { id, site_id, name, destination_url, short_domain_override },
                   { onConflict: "id" },
                 );
-              if (error) return bad(error.message, 500);
+              if (error) {
+                console.error("[admin] upsertPromotion error:", error);
+                return bad("Database operation failed", 500);
+              }
               return Response.json({ success: true });
             }
 
@@ -152,7 +171,10 @@ export const Route = createFileRoute("/api/admin")({
               const id = asStr(body.id);
               if (!id) return bad("id required");
               const { error } = await supabase.from("promotions").delete().eq("id", id);
-              if (error) return bad(error.message, 500);
+              if (error) {
+                console.error("[admin] deletePromotion error:", error);
+                return bad("Database operation failed", 500);
+              }
               return Response.json({ success: true });
             }
 
@@ -160,15 +182,22 @@ export const Route = createFileRoute("/api/admin")({
               const id = asStr(body.id);
               const name = asStr(body.name);
               if (!name) return bad("name required");
+              if (name.length > 200) return bad("Field too long");
               if (id) {
                 const { error } = await supabase
                   .from("sms_providers")
                   .update({ name })
                   .eq("id", id);
-                if (error) return bad(error.message, 500);
+                if (error) {
+                  console.error("[admin] upsertProvider update error:", error);
+                  return bad("Database operation failed", 500);
+                }
               } else {
                 const { error } = await supabase.from("sms_providers").insert({ name });
-                if (error) return bad(error.message, 500);
+                if (error) {
+                  console.error("[admin] upsertProvider insert error:", error);
+                  return bad("Database operation failed", 500);
+                }
               }
               return Response.json({ success: true });
             }
@@ -177,7 +206,10 @@ export const Route = createFileRoute("/api/admin")({
               const id = asStr(body.id);
               if (!id) return bad("id required");
               const { error } = await supabase.from("sms_providers").delete().eq("id", id);
-              if (error) return bad(error.message, 500);
+              if (error) {
+                console.error("[admin] deleteProvider error:", error);
+                return bad("Database operation failed", 500);
+              }
               return Response.json({ success: true });
             }
 
@@ -185,8 +217,8 @@ export const Route = createFileRoute("/api/admin")({
               return bad("Unknown action");
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Unknown error";
-          return Response.json({ error: msg }, { status: 500 });
+          console.error("[admin] handler error:", err);
+          return Response.json({ error: "Server error" }, { status: 500 });
         }
       },
     },

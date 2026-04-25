@@ -99,7 +99,8 @@ export const Route = createFileRoute("/api/shortio")({
               .update({ used_at: new Date().toISOString() })
               .eq("id", body.linkId);
             if (error) {
-              return Response.json({ error: error.message }, { status: 500 });
+              console.error("[shortio] mark-used error:", error);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
             }
             return Response.json({ success: true });
           }
