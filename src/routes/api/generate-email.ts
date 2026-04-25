@@ -63,14 +63,28 @@ ${forbiddenList}
 SAFE REPLACEMENTS:
 ${replacementLines}
 
-WRITING RULES:
-- Write like a real person talking to a friend. Not a salesperson.
-- Every sentence must be 20 words or fewer.
-- Use only simple, everyday words.
-- No hype, no big promises, no caps lock, no exclamation marks.
+WRITING RULES — PLAIN ENGLISH IS MANDATORY:
+- Write like a real person texting a friend. Not a salesperson, not a brand voice.
+- Target reading level: 6th grade. If a 12-year-old would not say it, do not write it.
+- Every sentence must be 15 words or fewer.
+- Use short, common, everyday words only. One or two syllables when possible.
+- BANNED FORMAL / FANCY WORDS (do NOT use any of these — they sound stiff or AI-written):
+  complimentary, threshold, milestone, milestones, explore, discover, unlock, leverage, utilize, utilise, obtain, acquire, redeem, accumulate, eligible, elevate, embark, journey, experience (as a noun for an offer), platform, ecosystem, seamlessly, effortlessly, thereby, hence, thus, furthermore, moreover, additionally, accordingly, prior to, subsequent, commence, conclude, endeavor, endeavour, fuss, hassle-free, pace (as in "at your own pace"), gather (use "get"), interact (use "play" or "use"), progress (as a verb), automatically (use "on its own" or just drop it), preferences, preferred.
+- Use these simple swaps instead:
+  "complimentary play" → "free play" is BANNED too — say "play on us", "extra play", or "bonus play".
+  "threshold" → "the goal" or "that level".
+  "milestone" → "step" or "level".
+  "explore" → "try" or "check out" softly.
+  "platform" → "site" or "game".
+  "automatically" → just remove the word.
+  "at your own pace" → "whenever you want".
+  "redeem" → "use".
+  "accumulate" → "earn" or "get".
+- No hype, no big promises, no ALL CAPS, no exclamation marks, no em-dashes (—) inside sentences.
 - Do not start sentences with "I" or "We" — keep focus on the reader ("you" / "your").
-- Vary sentence length. Short is fine.
-- No urgency pressure language.
+- Vary sentence length. Short is good. Two-word sentences are fine.
+- No urgency or pressure language.
+- Read your draft back: if it sounds like a brochure, a press release, or a chatbot, rewrite it shorter and simpler.
 
 DELIVERABILITY RULES:
 - Subject line: MUST start with exactly one emoji that visually relates to the offer (e.g. 🎁 for gifts, 🎰 for spins, 💸 for cash back, 🎯 for targeted offers, ☕ for casual, 🌟 for rewards). Pick the single most relevant emoji — never more than one, never generic ones like 😀. Follow the emoji with one space, then the subject text. Total length under 50 characters including the emoji. Personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
