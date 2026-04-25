@@ -71,7 +71,6 @@ async function createShortioLink(opts: {
     body: JSON.stringify({
       originalURL: opts.destinationUrl,
       domain: opts.domain,
-      path: opts.slug,
       allowDuplicates: true,
     }),
   });
