@@ -207,8 +207,8 @@ export const Route = createFileRoute("/api/shortio")({
                 slug,
               });
             } catch (err) {
-              const msg = err instanceof Error ? err.message : "short.io error";
-              return Response.json({ error: msg }, { status: 502 });
+              console.error("[shortio] short.io error:", err);
+              return Response.json({ error: "Failed to create short link" }, { status: 502 });
             }
 
             // 3. Save to DB
@@ -226,10 +226,8 @@ export const Route = createFileRoute("/api/shortio")({
               .single();
 
             if (insertErr || !inserted) {
-              return Response.json(
-                { error: insertErr?.message || "Failed to save link" },
-                { status: 500 },
-              );
+              console.error("[shortio] insert error:", insertErr);
+              return Response.json({ error: "Failed to save link" }, { status: 500 });
             }
 
             return Response.json({
@@ -242,8 +240,8 @@ export const Route = createFileRoute("/api/shortio")({
 
           return Response.json({ error: "Unknown action" }, { status: 400 });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Unknown error";
-          return Response.json({ error: message }, { status: 500 });
+          console.error("[shortio] handler error:", err);
+          return Response.json({ error: "Server error" }, { status: 500 });
         }
       },
     },
