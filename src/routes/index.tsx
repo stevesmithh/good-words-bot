@@ -4,6 +4,7 @@ import { Mail, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
+import { AdminButton } from "@/components/AdminEditor";
 
 type Tab = "email" | "sms";
 
@@ -31,12 +32,13 @@ function Index() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Mail className="h-5 w-5" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-semibold tracking-tight">Copy Generator</h1>
             <p className="text-xs text-muted-foreground">
               Inbox-safe emails and carrier-friendly bulk SMS.
             </p>
           </div>
+          <AdminButton />
         </div>
       </header>
 

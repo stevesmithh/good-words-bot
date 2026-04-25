@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      promotions: {
+        Row: {
+          created_at: string
+          destination_url: string
+          id: string
+          name: string
+          short_domain_override: string | null
+          site_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          destination_url: string
+          id: string
+          name: string
+          short_domain_override?: string | null
+          site_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          destination_url?: string
+          id?: string
+          name?: string
+          short_domain_override?: string | null
+          site_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          short_domain: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          short_domain: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          short_domain?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_providers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       sms_short_links: {
         Row: {
           created_at: string
