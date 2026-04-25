@@ -335,8 +335,8 @@ export function SmsGenerator() {
                   </SelectTrigger>
                   <SelectContent>
                     {SMS_PROVIDERS.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
+                      <SelectItem key={p.id} value={p.name}>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
