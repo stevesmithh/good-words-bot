@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { getPromotionById } from "@/lib/promotions";
 
 type GetOrCreateBody = {
   action: "get-or-create";
@@ -14,8 +13,6 @@ type MarkUsedBody = {
 };
 
 type Body = GetOrCreateBody | MarkUsedBody;
-
-const VALID_PROVIDERS = new Set(["SMSEdge", "Dexatel", "Laaffic"]);
 
 // Random alphanumeric slug, e.g. "o96f88"
 function randomSlug() {
