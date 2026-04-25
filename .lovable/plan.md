@@ -1,113 +1,98 @@
-# Add short.io short links to SMS generator with reuse tracking
+## Goal
 
-Each SMS generation picks a promotion (UTM) from a dropdown, gets a short.io short link for that UTM, appends the same link to all 6 variants, and tracks which variant the user actually used via a checkmark. Unused links are reused on the next generation for the same UTM until one is marked used.
+Add an **Admin Editor** accessible via a button in the top-right corner of the SMS Generator. Clicking it asks for a **4-digit code (`2026`)**, then opens a full editor where you can:
 
-## What you'll need to give me
+- **Sites**: rename a site, change its short.io domain (e.g. swap `dr0p.cc` to a new domain), add or remove a site.
+- **Promotions**: edit name, destination URL, site, and per-promotion short domain override; add or delete promotions.
+- **SMS Providers**: add/remove provider names (currently SMSEdge, Dexatel, Laaffic).
 
-1. **The UTM list** — paste it in chat. Each entry needs:
-   - Promotion name (what shows in the dropdown, e.g. "Daily Wheel Spin")
-   - Full destination URL with UTM params (e.g. `https://site.com/promo?utm_source=sms&utm_campaign=wheel`)
-2. **Short.io API key** — I'll request it as a secret (not stored in code).
-3. **Short.io domain** — the branded domain you use in short.io (e.g. `yourbrand.short.gy`). If you only have one, I'll just hardcode it.
+All changes are saved to the database and reflected immediately in the dropdowns.
 
-## How it will work end-to-end
+---
 
-```text
-User picks promotion from dropdown ──► Generate SMS
-                                        │
-                                        ▼
-                     Server checks Lovable Cloud DB:
-                       any UNUSED short link for this UTM?
-                                        │
-                          ┌─────────────┴─────────────┐
-                          │ YES                       │ NO
-                          ▼                           ▼
-                   Reuse that link            Call short.io API,
-                                              create new short link,
-                                              save to DB as "unused"
-                                        │
-                                        ▼
-                Append the SAME short link to all 6 variants
-                                        │
-                                        ▼
-                Each variant card shows a ✓ checkmark button
-                                        │
-                                        ▼
-                User clicks ✓ on the variant they sent
-                       → marks short link as "used" in DB
-                       → next generation creates a fresh link
+## How it will work (user view)
 
-           If user generates again WITHOUT clicking any ✓:
-                       → same unused short link gets reused
-                         on the new batch (still 6 variants)
-```
+1. A small **gear/edit icon** appears in the top-right corner of the dashboard.
+2. Click it → modal asks for the **4-digit access code**. Enter `2026` → editor opens.
+3. The editor is a tabbed dialog with three tabs: **Sites**, **Promotions**, **SMS Providers**.
+4. Each tab is a table with inline editing (name, domain, URL) plus **Add** and **Delete** buttons.
+5. Saving a row writes immediately to the database; the SMS generator picks it up on the next refresh.
+6. The code stays valid for the browser session so you don't get re-prompted on every open.
 
-## UI changes
+---
 
-**SMS form (left side)**
-- New required field at top: **Promotion** dropdown (lists all UTMs from the hardcoded list).
-- The existing "CTA link" field is removed for SMS — the short link is derived from the chosen promotion. (Email generator is untouched.)
+## Technical plan
 
-**SMS results (right side)**
-- Each of the 6 variant cards gets a new **green checkmark button** next to the copy button.
-- Clicking the checkmark:
-  - Marks that short link as "used" in the DB
-  - Visually fills the checkmark + disables it
-  - Shows a small "Used — next generation will create a new link" hint
-- A small badge under each card shows the short link and whether it's `Fresh` or `Reused from previous batch`.
+### 1. Database (3 new tables)
 
-## Technical pieces
+- `sites` — `id (text PK)`, `name`, `short_domain`, `created_at`
+- `promotions` — `id (text PK)`, `site_id (FK)`, `name`, `destination_url`, `short_domain_override (nullable)`, `created_at`
+- `sms_providers` — `id (uuid PK)`, `name (unique)`, `created_at`
 
-**New files**
-- `src/lib/promotions.ts` — hardcoded array `[{ id, name, destinationUrl }]`. You'll send the list, I'll fill it in.
-- `src/routes/api/shortio.ts` — server route. Two handlers:
-  - `POST /api/shortio/get-or-create` — input: `{ promotionId }`. Looks up unused link in DB → reuses or creates via short.io API → returns `{ shortUrl, linkId, isReused }`.
-  - `POST /api/shortio/mark-used` — input: `{ linkId }`. Sets `used_at = now()` in DB.
+RLS: enable RLS on all three; allow public `SELECT` (so the dropdowns work without login) and **block all writes** at the RLS layer. Writes happen only via server functions that check the admin code (defense in depth — never trust the client).
 
-**Edited files**
-- `src/components/SmsGenerator.tsx` — add Promotion dropdown, remove CTA link input, fetch short link before calling generator, pass it to the API, render checkmark buttons + "fresh/reused" badge.
-- `src/routes/api/generate-sms.ts` — accept the resolved `shortUrl` from the client (it just appends it to each variant; logic already supports a CTA link).
+A one-time migration seeds these tables from the existing `src/lib/promotions.ts` constants (6 sites, 3 providers, ~140 promotions).
 
-**Lovable Cloud (database)**
+### 2. Admin server functions (`createServerFn`)
 
-Enabling Lovable Cloud (free) for one table:
+A single file `src/lib/admin.functions.ts` exposes:
 
-```sql
-create table public.sms_short_links (
-  id uuid primary key default gen_random_uuid(),
-  promotion_id text not null,
-  destination_url text not null,
-  short_url text not null,
-  shortio_id text not null,
-  created_at timestamptz not null default now(),
-  used_at timestamptz
-);
-create index on public.sms_short_links (promotion_id, used_at);
-```
+- `verifyAdminCode({ code })` → returns `{ token }` if `code === ADMIN_CODE` env secret, else throws.
+- `adminUpsertSite`, `adminDeleteSite`
+- `adminUpsertPromotion`, `adminDeletePromotion`
+- `adminUpsertProvider`, `adminDeleteProvider`
 
-No auth/RLS needed — internal tool, single user. Table is read/written only by server routes using the service role key.
+Every mutating function requires the `token` in its input and re-validates it server-side using `supabaseAdmin` (bypasses RLS). The token is just a signed value derived from the secret — short-lived, stored in `sessionStorage` on the client.
 
-**Secret**
-- `SHORTIO_API_KEY` — added via the secrets tool after you confirm the key.
+The admin code `2026` is stored as a runtime secret `ADMIN_ACCESS_CODE` (I'll request it via the secret prompt — you can change it any time without redeploying).
 
-## Edge cases handled
+### 3. Catalog loader
 
-- **Short.io API down or returns error** → generation still works, falls back to the raw destination URL with a toast warning.
-- **DB has multiple unused links for the same UTM** (shouldn't happen, but possible if checkmark is never clicked across many sessions) → reuses the oldest unused one.
-- **User changes promotion mid-generation** → fresh fetch for the new promotion.
-- **Variant text already contains a link from a previous generation** → not an issue; we only append once at API-response time.
+Replace the hardcoded `PROMOTIONS` / `SITES` / `SMS_PROVIDERS` exports with a TanStack Query hook `useCatalog()` that fetches from the `sites`, `promotions`, `sms_providers` tables (public read). The SMS generator uses this hook instead of static imports.
 
-## What stays the same
+The static file stays as a fallback type definition only — runtime data comes from the DB.
 
-- Email generator: untouched.
-- All existing SMS spam-word filtering, casual/standard variant logic, "no code word" rules: untouched.
-- Six-variant output, character/segment counts, copy buttons: untouched (just gain a checkmark sibling).
+### 4. UI components
 
-## Open thing I'll confirm before building
+- `src/components/AdminButton.tsx` — gear icon top-right, opens code dialog.
+- `src/components/AdminCodeDialog.tsx` — 4-digit input, calls `verifyAdminCode`.
+- `src/components/AdminEditor.tsx` — full-screen dialog with 3 tabs (Sites / Promotions / Providers), each rendering an editable table using existing shadcn `Table`, `Input`, `Button` components.
 
-Once you paste the UTM list + short.io key + branded domain, I'll:
-1. Enable Lovable Cloud and create the `sms_short_links` table.
-2. Add the `SHORTIO_API_KEY` secret request.
-3. Implement the routes + UI changes above.
+Mounted once inside `SmsGenerator.tsx` header area.
 
-Approve this plan to switch into build mode, then send me the UTM list, short.io API key, and branded short.io domain.
+### 5. Wiring
+
+- `src/routes/api/shortio.ts` already looks up by `promotion_id`; it will fetch the destination URL and short domain from the DB instead of the hardcoded list, so changes apply immediately without redeploy.
+
+---
+
+## Files touched
+
+**New**
+- `supabase/migrations/<timestamp>_admin_catalog.sql` — 3 tables, RLS, seed data
+- `src/lib/admin.functions.ts` — server functions
+- `src/lib/catalog.ts` — `useCatalog()` hook
+- `src/components/AdminButton.tsx`
+- `src/components/AdminCodeDialog.tsx`
+- `src/components/AdminEditor.tsx`
+
+**Edited**
+- `src/components/SmsGenerator.tsx` — use `useCatalog()` + mount `<AdminButton />`
+- `src/routes/api/shortio.ts` — read promotion from DB instead of static file
+
+**Kept as-is**
+- `src/lib/promotions.ts` — types only; data moves to DB
+
+---
+
+## Secret needed
+
+I'll request one runtime secret: **`ADMIN_ACCESS_CODE`** (set to `2026`). Storing it as a secret means you can change the code later without me touching code.
+
+---
+
+## Out of scope (ask if you want these too)
+
+- Audit log of who edited what (no auth on the app today).
+- Bulk CSV import/export of promotions.
+- Per-user accounts / multi-admin roles.
