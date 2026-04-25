@@ -118,7 +118,7 @@ export function EmailGenerator() {
 
   const fullEmail = useMemo(() => {
     if (!result) return "";
-    return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}`;
+    return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}\n\nCTA Button: ${result.cta}`;
   }, [result]);
 
   return (
