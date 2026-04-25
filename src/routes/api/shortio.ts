@@ -172,7 +172,8 @@ export const Route = createFileRoute("/api/shortio")({
               .limit(1);
 
             if (lookupErr) {
-              return Response.json({ error: lookupErr.message }, { status: 500 });
+              console.error("[shortio] lookup error:", lookupErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
             }
 
             if (existing && existing.length > 0) {
