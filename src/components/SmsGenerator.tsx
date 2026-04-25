@@ -316,7 +316,7 @@ export function SmsGenerator() {
                   <SelectContent>
                     {SITES.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        {s.id}
+                        {s.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
