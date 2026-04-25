@@ -111,21 +111,48 @@ export const Route = createFileRoute("/api/shortio")({
                 { status: 400 },
               );
             }
-            if (!VALID_PROVIDERS.has(body.provider)) {
+
+            const supabase = getSupabaseAdmin();
+
+            // Validate provider exists in DB
+            const { data: providerRow, error: provErr } = await supabase
+              .from("sms_providers")
+              .select("name")
+              .eq("name", body.provider)
+              .maybeSingle();
+            if (provErr) return Response.json({ error: provErr.message }, { status: 500 });
+            if (!providerRow) {
               return Response.json({ error: "Invalid provider" }, { status: 400 });
             }
-            const promo = getPromotionById(body.promotionId);
+
+            // Fetch promotion + its site for the short domain
+            const { data: promo, error: promoErr } = await supabase
+              .from("promotions")
+              .select("id, destination_url, short_domain_override, sites(short_domain)")
+              .eq("id", body.promotionId)
+              .maybeSingle();
+            if (promoErr) return Response.json({ error: promoErr.message }, { status: 500 });
             if (!promo) {
               return Response.json({ error: "Unknown promotion" }, { status: 400 });
             }
 
-            const supabase = getSupabaseAdmin();
+            const siteRel = promo.sites as { short_domain: string } | null;
+            const shortDomain =
+              (promo.short_domain_override as string | null) || siteRel?.short_domain;
+            if (!shortDomain) {
+              return Response.json(
+                { error: "Site has no short domain configured" },
+                { status: 500 },
+              );
+            }
+            const destinationUrl = promo.destination_url as string;
+            const promoId = promo.id as string;
 
-            // 1. Look for an unused link for this promotion + provider
+            // 1. Look for an unused link
             const { data: existing, error: lookupErr } = await supabase
               .from("sms_short_links")
               .select("id, short_url, destination_url")
-              .eq("promotion_id", promo.id)
+              .eq("promotion_id", promoId)
               .eq("provider", body.provider)
               .is("used_at", null)
               .order("created_at", { ascending: true })
@@ -155,13 +182,13 @@ export const Route = createFileRoute("/api/shortio")({
             }
 
             const slug = randomSlug();
-            const utmUrl = buildUtmUrl(promo.destinationUrl, body.provider, slug);
+            const utmUrl = buildUtmUrl(destinationUrl, body.provider, slug);
 
             let created;
             try {
               created = await createShortioLink({
                 apiKey,
-                domain: promo.shortDomain,
+                domain: shortDomain,
                 destinationUrl: utmUrl,
                 slug,
               });
@@ -174,12 +201,12 @@ export const Route = createFileRoute("/api/shortio")({
             const { data: inserted, error: insertErr } = await supabase
               .from("sms_short_links")
               .insert({
-                promotion_id: promo.id,
+                promotion_id: promoId,
                 provider: body.provider,
                 destination_url: utmUrl,
                 short_url: created.shortUrl,
                 shortio_id: created.shortioId,
-                short_domain: promo.shortDomain,
+                short_domain: shortDomain,
               })
               .select("id")
               .single();
