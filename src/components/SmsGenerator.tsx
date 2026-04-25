@@ -775,7 +775,7 @@ function SmsCard({
             disabled={shortLink.used}
             className={cn(
               "h-8 px-2",
-              shortLink.used && "bg-success text-success-foreground hover:bg-success",
+              shortLink.used && "bg-success text-white hover:bg-success",
             )}
             title={
               shortLink.used
