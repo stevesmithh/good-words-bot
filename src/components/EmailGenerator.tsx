@@ -35,6 +35,7 @@ type EmailResult = {
   preview: string;
   header: string;
   body: string;
+  cta: string;
 };
 
 export function EmailGenerator() {
