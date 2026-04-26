@@ -151,13 +151,13 @@ export function EmailGenerator() {
 
   const fullEmail = useMemo(() => {
     if (!result) return "";
-    if (result.inboxType === "primary") {
+    if (result.inboxType === "primary" || result.inboxType === "friendly") {
       return `Subject: ${result.subject}\nPreheader: ${result.preheader}\n\n${result.body}\n\nCTA Button: ${result.cta}`;
     }
     return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}\n\nCTA Button: ${result.cta}`;
   }, [result]);
 
-  const isPrimary = inboxType === "primary";
+  const isStrict = inboxType !== "promotional";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
