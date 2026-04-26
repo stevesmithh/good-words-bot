@@ -425,7 +425,7 @@ export function EmailGenerator() {
           </>
         )}
 
-        {result && result.inboxType === "primary" && (
+        {result && (result.inboxType === "primary" || result.inboxType === "friendly") && (
           <>
             <OutputCard
               title="Subject line"
