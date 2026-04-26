@@ -347,9 +347,18 @@ function PromotionsEditor({ promotions, sites }: { promotions: Promotion[]; site
   const save = async (id: string) => {
     const patch = editing[id];
     if (!patch) return;
+    const current = promotions.find((p) => p.id === id);
+    if (!current) return;
     setBusy(id);
     try {
-      await api("upsertPromotion", { id, ...patch });
+      await api("upsertPromotion", {
+        id,
+        site_id: current.site_id,
+        name: current.name,
+        destination_url: current.destination_url,
+        short_domain_override: current.short_domain_override,
+        ...patch,
+      });
       toast.success("Saved");
       setEditing((e) => {
         const { [id]: _, ...rest } = e;
