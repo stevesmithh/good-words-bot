@@ -201,7 +201,7 @@ export function EmailGenerator() {
                   <span className="text-sm font-semibold">Primary</span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Transactional style — lands in primary inbox.
+                  Higher deliverability, cleaner tone.
                 </p>
               </button>
             </div>
