@@ -123,21 +123,36 @@ Now, using all the rules above, create a high-quality email for the following de
 
 [USER'S OFFER DETAILS GO HERE]`;
 
-function buildPrimaryPrompt(offerDetails: string) {
-  // Insert the offer details ONLY at the placeholder. Nothing else changes.
+function buildPrimaryPrompt(input: {
+  offerDetails: string;
+  audience: Audience;
+  brandName?: string;
+}) {
+  // Insert the offer details ONLY at the placeholder. Nothing else in the
+  // template changes.
   const filled = PRIMARY_INBOX_PROMPT_TEMPLATE.replace(
     "[USER'S OFFER DETAILS GO HERE]",
-    offerDetails,
+    input.offerDetails,
   );
+
+  const brandLine = input.brandName
+    ? `Brand name to use in the sign-off (replace "BitPlay" / "The BitPlay Team" with this brand): ${input.brandName}`
+    : "";
+  const audienceLine = `Audience context: ${AUDIENCE_LABEL[input.audience]}. Tone hint: ${AUDIENCE_TONE[input.audience]}`;
+
   // Append a small instruction so the model returns structured fields via tool-calling.
   return `${filled}
+
+${audienceLine}
+${brandLine}
 
 IMPORTANT: Return your answer by calling the provided tool "return_primary_email" with these fields:
 - subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
 - preheader: the Preheader text only (one short neutral sentence).
-- body: the full Email Body starting from the greeting through the sign-off "Best regards, The BitPlay Team". Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — describe the CTA naturally in the body if needed, but the button label itself goes in the cta field.
-- cta: the CTA button label only, 2–4 words, strong and transactional in style (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
+- body: the full Email Body starting from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — the button label itself goes in the cta field.
+- cta: the CTA button label only, 2–4 words, strong and clear (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
 }
+
 
 function buildPromotionalPrompt(input: {
   offerDetails: string;
