@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SPAM_CATEGORIES, SAFE_REPLACEMENTS, type SpamCategoryId } from "@/lib/spam-words";
 
 type Audience = "new" | "active" | "inactive";
+type InboxType = "promotional" | "primary";
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
   new: "New users",
@@ -17,7 +18,128 @@ const AUDIENCE_TONE: Record<Audience, string> = {
     "Gentle and low-pressure. No guilt, no drama. A warm nudge to come back and see what is new.",
 };
 
-function buildPrompt(input: {
+// =====================================================================
+// PRIMARY INBOX PROMPT — used VERBATIM, every single time.
+// Do NOT edit, shorten, or paraphrase this prompt. Only the user's offer
+// details are appended at the bottom where the placeholder lives.
+// =====================================================================
+const PRIMARY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
+
+Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
+
+### STRICT PHILOSOPHY (Never Break These Rules)
+
+- Primary inbox > Promotions tab. Always prioritize deliverability.
+
+- Sound like a helpful system message from a trusted platform (bank, SaaS tool, or gaming account).
+
+- Never sound like marketing or sales.
+
+- Clarity beats persuasion.
+
+- Short, scannable, and respectful of the reader's time.
+
+### FORBIDDEN WORDS & PHRASES (Completely Avoid)
+
+bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
+
+### ALWAYS FOLLOW THIS EXACT STRUCTURE
+
+1. **Subject Line**  
+
+   - Maximum 6-8 words  
+
+   - Action-oriented or account-focused  
+
+   - Sounds like a task or update  
+
+   - Examples: "New quests available on your account", "Complete your BitPlay registration"
+
+2. **Preheader** (1 short sentence)  
+
+   - What appears after the subject in the inbox preview  
+
+   - Helpful and neutral
+
+3. **Email Body Structure**
+
+   - Personal greeting: "Hi {{ insert first_name 'default=default' }}," or "Hi [First Name],"
+
+   - Warm but calm opening line (1 sentence)
+
+   - Clear explanation of what happened or what needs to be done
+
+   - Bullet points for details when useful
+
+   - One clear CTA with strong button text
+
+   - Soft helpful closing
+
+   - Sign-off: "Best regards, The BitPlay Team"
+
+### TONE GUIDELINES
+
+- Calm, professional, friendly, and trustworthy
+
+- Conversational but not casual
+
+- Helpful mentor style rather than salesperson
+
+- Use short sentences and short paragraphs
+
+- Make it feel personal and human
+
+### ADVANCED TECHNIQUES YOU MUST USE
+
+- Personalize with first name naturally
+
+- Bold important elements (**$20**, **JOINUS**, numbers, button text)
+
+- Create logical flow: Thank you → What's new → What to do next → Help
+
+- Make the CTA feel like the natural next step
+
+- Keep total email readable in under 15 seconds on mobile
+
+- Use whitespace generously
+
+### OUTPUT FORMAT (Always use exactly this format)
+
+**Subject Line:**  
+
+[Your subject here]
+
+**Preheader:**  
+
+[Your preheader here]
+
+**Email Body:**
+
+[Full email with proper line breaks and markdown for bold if needed]
+
+---
+
+Now, using all the rules above, create a high-quality email for the following details:
+
+[USER'S OFFER DETAILS GO HERE]`;
+
+function buildPrimaryPrompt(offerDetails: string) {
+  // Insert the offer details ONLY at the placeholder. Nothing else changes.
+  const filled = PRIMARY_INBOX_PROMPT_TEMPLATE.replace(
+    "[USER'S OFFER DETAILS GO HERE]",
+    offerDetails,
+  );
+  // Append a small instruction so the model returns structured fields via tool-calling.
+  return `${filled}
+
+IMPORTANT: Return your answer by calling the provided tool "return_primary_email" with these fields:
+- subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
+- preheader: the Preheader text only (one short neutral sentence).
+- body: the full Email Body starting from the greeting through the sign-off "Best regards, The BitPlay Team". Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — describe the CTA naturally in the body if needed, but the button label itself goes in the cta field.
+- cta: the CTA button label only, 2–4 words, strong and transactional in style (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
+}
+
+function buildPromotionalPrompt(input: {
   offerDetails: string;
   audience: Audience;
   brandName?: string;
@@ -90,16 +212,55 @@ DELIVERABILITY RULES:
 - Subject line: MUST start with exactly one emoji that visually relates to the offer (e.g. 🎁 for gifts, 🎰 for spins, 💸 for cash back, 🎯 for targeted offers, ☕ for casual, 🌟 for rewards). Pick the single most relevant emoji — never more than one, never generic ones like 😀. Follow the emoji with one space, then the subject text. Total length under 50 characters including the emoji. Personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
 - Preview text: SHORT — strictly under 50 characters. Aim for 30–45 characters. One short phrase that adds new context not in the subject. No pressure language, no punctuation pile-ups, no emojis.
 - Header: 3–7 words, warm and plain.
-- Body: structured as 2–3 short paragraphs separated by a blank line (\n\n). Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line. Structure:
+- Body: structured as 2–3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line. Structure:
   1. Opening paragraph (1–3 sentences): warm opener tailored to the audience, leading into why you are writing. Sentences flow together in the same paragraph.
   2. Rewards block: one short intro line, then each reward on its own line as a compact list (this is the ONLY place line breaks per item are allowed). Format each reward line as "Label: value" (e.g. "Goldmine Rewards: up to $300 weekly").
   3. Closing paragraph (1–2 sentences): a soft, low-pressure nudge about where to find it or how to use it. No "click here", no "buy now". Sentences flow on the same line.
-- Use \n\n between paragraphs (blank line) and single \n only between reward items inside the rewards block.
+- Use \\n\\n between paragraphs (blank line) and single \\n only between reward items inside the rewards block.
 - Never start every sentence on a new line. Outside the rewards block, sentences should sit next to each other within a paragraph like a normal human email.
 - CTA button: 2–4 words, plain and friendly, action-oriented but never pushy. Title Case. No emojis, no exclamation marks, no all-caps. AVOID spammy CTA words like: "Buy Now", "Click Here", "Act Now", "Order Now", "Shop Now", "Claim Now", "Sign Up Now", "Free", "Limited Time", "Don't Miss". PREFER soft, safe phrasings like: "See Details", "Take a Look", "View Your Offer", "Open Your Rewards", "Check It Out", "Explore Rewards", "See What's Inside", "Visit Your Account".
 
 Return the email using the provided tool.`;
 }
+
+const PROMOTIONAL_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "return_email",
+    description: "Return the generated promotional email in structured form.",
+    parameters: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
+        preview: { type: "string", description: "SHORT preview text — strictly under 50 characters, ideally 30–45." },
+        header: { type: "string", description: "Email header, 3-7 words." },
+        body: { type: "string", description: "Email body as 2-3 short paragraphs separated by a blank line (\\n\\n)." },
+        cta: { type: "string", description: "Call-to-action button text, 2-4 words, Title Case, friendly and safe." },
+      },
+      required: ["subject", "preview", "header", "body", "cta"],
+      additionalProperties: false,
+    },
+  },
+};
+
+const PRIMARY_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "return_primary_email",
+    description: "Return the generated primary-inbox transactional-style email in structured form.",
+    parameters: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Subject Line text only — 6 to 8 words, action-oriented or account-focused, no emoji, no '**Subject Line:**' prefix." },
+        preheader: { type: "string", description: "Preheader — one short, neutral, helpful sentence." },
+        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Preserve markdown bold (**like this**). Paragraphs separated by \\n\\n." },
+        cta: { type: "string", description: "CTA button label only — 2 to 4 words, strong transactional style, no emoji." },
+      },
+      required: ["subject", "preheader", "body", "cta"],
+      additionalProperties: false,
+    },
+  },
+};
 
 export const Route = createFileRoute("/api/generate-email")({
   server: {
@@ -112,13 +273,13 @@ export const Route = createFileRoute("/api/generate-email")({
             brandName?: string;
             extraForbidden?: string;
             activeCategories: SpamCategoryId[];
+            inboxType?: InboxType;
           };
 
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
 
-          // Length caps to prevent oversized prompt abuse
           if (body.offerDetails.length > 2000) {
             return Response.json({ error: "Offer details must be 2000 chars or less." }, { status: 400 });
           }
@@ -140,7 +301,15 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
-          const prompt = buildPrompt(body);
+          const inboxType: InboxType = body.inboxType === "primary" ? "primary" : "promotional";
+
+          const prompt =
+            inboxType === "primary"
+              ? buildPrimaryPrompt(body.offerDetails)
+              : buildPromotionalPrompt(body);
+
+          const tool = inboxType === "primary" ? PRIMARY_TOOL : PROMOTIONAL_TOOL;
+          const toolName = tool.function.name;
 
           const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
@@ -151,28 +320,8 @@ export const Route = createFileRoute("/api/generate-email")({
             body: JSON.stringify({
               model: "google/gemini-3-flash-preview",
               messages: [{ role: "user", content: prompt }],
-              tools: [
-                {
-                  type: "function",
-                  function: {
-                    name: "return_email",
-                    description: "Return the generated email in structured form.",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
-                        preview: { type: "string", description: "SHORT preview text — strictly under 50 characters, ideally 30–45. One short phrase that adds new context not in the subject. No emojis, no exclamation marks." },
-                        header: { type: "string", description: "Email header, 3-7 words." },
-                        body: { type: "string", description: "Email body as 2-3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow on the same line — do not break every sentence onto its own line. The rewards block is the only place where individual items go on their own lines (separated by single \\n)." },
-                        cta: { type: "string", description: "Call-to-action button text, 2-4 words, Title Case, friendly and safe (e.g. 'See Details', 'Take a Look', 'View Your Offer'). Never spammy phrases like 'Buy Now', 'Click Here', 'Free', 'Act Now'." },
-                      },
-                      required: ["subject", "preview", "header", "body", "cta"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-              ],
-              tool_choice: { type: "function", function: { name: "return_email" } },
+              tools: [tool],
+              tool_choice: { type: "function", function: { name: toolName } },
             }),
           });
 
@@ -221,7 +370,7 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
-          let parsed: { subject: string; preview: string; header: string; body: string; cta: string };
+          let parsed: Record<string, string>;
           try {
             parsed = JSON.parse(argsStr);
           } catch {
@@ -231,22 +380,30 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
-          // Normalize escaped newlines/tabs that some models emit as literal "\n" text
           const normalizeNewlines = (s: string) =>
             s
               .replace(/\\r\\n/g, "\n")
               .replace(/\\n/g, "\n")
               .replace(/\\t/g, "\t");
 
-          parsed = {
-            subject: parsed.subject,
-            preview: parsed.preview,
-            header: parsed.header,
-            body: normalizeNewlines(parsed.body),
-            cta: parsed.cta,
-          };
+          if (inboxType === "primary") {
+            return Response.json({
+              inboxType: "primary",
+              subject: parsed.subject ?? "",
+              preheader: parsed.preheader ?? "",
+              body: normalizeNewlines(parsed.body ?? ""),
+              cta: parsed.cta ?? "",
+            });
+          }
 
-          return Response.json(parsed);
+          return Response.json({
+            inboxType: "promotional",
+            subject: parsed.subject ?? "",
+            preview: parsed.preview ?? "",
+            header: parsed.header ?? "",
+            body: normalizeNewlines(parsed.body ?? ""),
+            cta: parsed.cta ?? "",
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
           return Response.json({ error: message }, { status: 500 });
