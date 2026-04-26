@@ -320,7 +320,11 @@ export const Route = createFileRoute("/api/generate-email")({
 
           const prompt =
             inboxType === "primary"
-              ? buildPrimaryPrompt(body.offerDetails)
+              ? buildPrimaryPrompt({
+                  offerDetails: body.offerDetails,
+                  audience: body.audience,
+                  brandName: body.brandName,
+                })
               : buildPromotionalPrompt(body);
 
           const tool = inboxType === "primary" ? PRIMARY_TOOL : PROMOTIONAL_TOOL;
