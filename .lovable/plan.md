@@ -1,98 +1,123 @@
-## Goal
+# Email Generator v2.0 — Inbox Type Selection
 
-Add an **Admin Editor** accessible via a button in the top-right corner of the SMS Generator. Clicking it asks for a **4-digit code (`2026`)**, then opens a full editor where you can:
+Add an **Inbox Type** selector to the email generator with two modes that completely change how the email is produced.
 
-- **Sites**: rename a site, change its short.io domain (e.g. swap `dr0p.cc` to a new domain), add or remove a site.
-- **Promotions**: edit name, destination URL, site, and per-promotion short domain override; add or delete promotions.
-- **SMS Providers**: add/remove provider names (currently SMSEdge, Dexatel, Laaffic).
+## What the user gets
 
-All changes are saved to the database and reflected immediately in the dropdowns.
+A new selector at the top of the form:
+- **Promotional inbox** — current behavior (normal promotional email, still avoids spam triggers and banned words)
+- **Primary inbox** — new behavior, uses your exact "Elite Email Strategist & Deliverability Expert" prompt **verbatim, every single time**, producing transactional-style account-notification emails
+
+## The exact Primary-inbox prompt (used verbatim, every time)
+
+When the user picks **Primary**, the backend will send this prompt to the AI **with no edits, no shortening, no paraphrasing** — only the user's offer details get appended at the end where you marked the placeholder:
+
+```
+You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
+
+Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
+
+### STRICT PHILOSOPHY (Never Break These Rules)
+- Primary inbox > Promotions tab. Always prioritize deliverability.
+- Sound like a helpful system message from a trusted platform (bank, SaaS tool, or gaming account).
+- Never sound like marketing or sales.
+- Clarity beats persuasion.
+- Short, scannable, and respectful of the reader's time.
+
+### FORBIDDEN WORDS & PHRASES (Completely Avoid)
+bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
+
+### ALWAYS FOLLOW THIS EXACT STRUCTURE
+1. **Subject Line**
+   - Maximum 6-8 words
+   - Action-oriented or account-focused
+   - Sounds like a task or update
+   - Examples: "New quests available on your account", "Complete your BitPlay registration"
+2. **Preheader** (1 short sentence)
+   - What appears after the subject in the inbox preview
+   - Helpful and neutral
+3. **Email Body Structure**
+   - Personal greeting: "Hi {{ insert first_name 'default=default' }}," or "Hi [First Name],"
+   - Warm but calm opening line (1 sentence)
+   - Clear explanation of what happened or what needs to be done
+   - Bullet points for details when useful
+   - One clear CTA with strong button text
+   - Soft helpful closing
+   - Sign-off: "Best regards, The BitPlay Team"
+
+### TONE GUIDELINES
+- Calm, professional, friendly, and trustworthy
+- Conversational but not casual
+- Helpful mentor style rather than salesperson
+- Use short sentences and short paragraphs
+- Make it feel personal and human
+
+### ADVANCED TECHNIQUES YOU MUST USE
+- Personalize with first name naturally
+- Bold important elements (**$20**, **JOINUS**, numbers, button text)
+- Create logical flow: Thank you → What's new → What to do next → Help
+- Make the CTA feel like the natural next step
+- Keep total email readable in under 15 seconds on mobile
+- Use whitespace generously
+
+### OUTPUT FORMAT (Always use exactly this format)
+**Subject Line:**
+[Your subject here]
+
+**Preheader:**
+[Your preheader here]
+
+**Email Body:**
+[Full email with proper line breaks and markdown for bold if needed]
 
 ---
 
-## How it will work (user view)
+Now, using all the rules above, create a high-quality email for the following details:
 
-1. A small **gear/edit icon** appears in the top-right corner of the dashboard.
-2. Click it → modal asks for the **4-digit access code**. Enter `2026` → editor opens.
-3. The editor is a tabbed dialog with three tabs: **Sites**, **Promotions**, **SMS Providers**.
-4. Each tab is a table with inline editing (name, domain, URL) plus **Add** and **Delete** buttons.
-5. Saving a row writes immediately to the database; the SMS generator picks it up on the next refresh.
-6. The code stays valid for the browser session so you don't get re-prompted on every open.
+[USER'S OFFER DETAILS GO HERE]
+```
 
----
+This whole block is stored as a single constant in the backend route file. The only dynamic part is replacing `[USER'S OFFER DETAILS GO HERE]` with whatever the user typed in the offer textarea. Everything else — including the BitPlay sign-off, the forbidden words list, the structure rules — stays exactly as you wrote it.
 
-## Technical plan
+## Output structure per mode
 
-### 1. Database (3 new tables)
+**Promotional mode** (unchanged from today):
+- Subject (with emoji prefix), Preview, Header, Body, CTA
 
-- `sites` — `id (text PK)`, `name`, `short_domain`, `created_at`
-- `promotions` — `id (text PK)`, `site_id (FK)`, `name`, `destination_url`, `short_domain_override (nullable)`, `created_at`
-- `sms_providers` — `id (uuid PK)`, `name (unique)`, `created_at`
+**Primary mode** (matches your prompt's output format):
+- Subject Line (6–8 words, no emoji, account/task focused)
+- Preheader (1 short neutral sentence)
+- Email Body (greeting → opener → explanation → bullets if useful → CTA → soft close → "Best regards, The BitPlay Team")
+- CTA button text (extracted separately so the button can be styled in the UI)
 
-RLS: enable RLS on all three; allow public `SELECT` (so the dropdowns work without login) and **block all writes** at the RLS layer. Writes happen only via server functions that check the admin code (defense in depth — never trust the client).
+## Plan
 
-A one-time migration seeds these tables from the existing `src/lib/promotions.ts` constants (6 sites, 3 providers, ~140 promotions).
+### 1. Backend — `src/routes/api/generate-email.ts`
+- Accept new field `inboxType: "promotional" | "primary"` (default `"promotional"` for backward compatibility).
+- Store the exact prompt above as a `const PRIMARY_INBOX_PROMPT` string — verbatim, no edits.
+- Branch:
+  - **Promotional**: keep existing `buildPrompt` exactly as it is today.
+  - **Primary**: take `PRIMARY_INBOX_PROMPT` and replace `[USER'S OFFER DETAILS GO HERE]` with `body.offerDetails`. Nothing else added, nothing removed.
+- Branch the tool-calling schema so the AI returns structured JSON we can render:
+  - **Promotional**: existing `return_email` tool (`subject`, `preview`, `header`, `body`, `cta`).
+  - **Primary**: new `return_primary_email` tool with fields `subject`, `preheader`, `body`, `cta`. The `body` field contains the full email (greeting through "Best regards, The BitPlay Team") with markdown bold preserved and `\n\n` between paragraphs.
+- Reuse the same gateway call, error handling, and newline normalization.
 
-### 2. Admin server functions (`createServerFn`)
+### 2. Frontend — `src/components/EmailGenerator.tsx`
+- Add `inboxType` state (default `"promotional"`).
+- Add an **Inbox type** selector at the very top of the form (2-option segmented toggle) with short helper text:
+  - "Promotional — normal marketing email, spam-safe"
+  - "Primary — transactional style, lands in primary inbox"
+- When **Primary** is selected: hide the "Audience" selector and "Spam categories" section (the strict prompt does not use them). Keep brand name and extra forbidden words visible (extra forbidden words are **not** injected into the strict primary prompt — that prompt stays verbatim — so we'll grey them out with a small note "Not used in Primary mode").
+- Render output cards based on which mode produced the result:
+  - Promotional: Subject / Preview / Header / Body / CTA (today's UI).
+  - Primary: Subject / Preheader / Body / CTA (no separate header card, body shows markdown bold rendered).
+- "Copy full email" works for both shapes.
 
-A single file `src/lib/admin.functions.ts` exposes:
-
-- `verifyAdminCode({ code })` → returns `{ token }` if `code === ADMIN_CODE` env secret, else throws.
-- `adminUpsertSite`, `adminDeleteSite`
-- `adminUpsertPromotion`, `adminDeletePromotion`
-- `adminUpsertProvider`, `adminDeleteProvider`
-
-Every mutating function requires the `token` in its input and re-validates it server-side using `supabaseAdmin` (bypasses RLS). The token is just a signed value derived from the secret — short-lived, stored in `sessionStorage` on the client.
-
-The admin code `2026` is stored as a runtime secret `ADMIN_ACCESS_CODE` (I'll request it via the secret prompt — you can change it any time without redeploying).
-
-### 3. Catalog loader
-
-Replace the hardcoded `PROMOTIONS` / `SITES` / `SMS_PROVIDERS` exports with a TanStack Query hook `useCatalog()` that fetches from the `sites`, `promotions`, `sms_providers` tables (public read). The SMS generator uses this hook instead of static imports.
-
-The static file stays as a fallback type definition only — runtime data comes from the DB.
-
-### 4. UI components
-
-- `src/components/AdminButton.tsx` — gear icon top-right, opens code dialog.
-- `src/components/AdminCodeDialog.tsx` — 4-digit input, calls `verifyAdminCode`.
-- `src/components/AdminEditor.tsx` — full-screen dialog with 3 tabs (Sites / Promotions / Providers), each rendering an editable table using existing shadcn `Table`, `Input`, `Button` components.
-
-Mounted once inside `SmsGenerator.tsx` header area.
-
-### 5. Wiring
-
-- `src/routes/api/shortio.ts` already looks up by `promotion_id`; it will fetch the destination URL and short domain from the DB instead of the hardcoded list, so changes apply immediately without redeploy.
-
----
+### 3. No DB / edge function changes
+Pure prompt + UI work. No migrations, no secrets needed.
 
 ## Files touched
 
-**New**
-- `supabase/migrations/<timestamp>_admin_catalog.sql` — 3 tables, RLS, seed data
-- `src/lib/admin.functions.ts` — server functions
-- `src/lib/catalog.ts` — `useCatalog()` hook
-- `src/components/AdminButton.tsx`
-- `src/components/AdminCodeDialog.tsx`
-- `src/components/AdminEditor.tsx`
-
-**Edited**
-- `src/components/SmsGenerator.tsx` — use `useCatalog()` + mount `<AdminButton />`
-- `src/routes/api/shortio.ts` — read promotion from DB instead of static file
-
-**Kept as-is**
-- `src/lib/promotions.ts` — types only; data moves to DB
-
----
-
-## Secret needed
-
-I'll request one runtime secret: **`ADMIN_ACCESS_CODE`** (set to `2026`). Storing it as a secret means you can change the code later without me touching code.
-
----
-
-## Out of scope (ask if you want these too)
-
-- Audit log of who edited what (no auth on the app today).
-- Bulk CSV import/export of promotions.
-- Per-user accounts / multi-admin roles.
+- `src/routes/api/generate-email.ts` — add the verbatim primary prompt constant + inbox-type branching + new tool schema
+- `src/components/EmailGenerator.tsx` — add inbox-type selector, conditional fields, dual output rendering

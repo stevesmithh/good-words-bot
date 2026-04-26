@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Mail, Sparkles, AlertCircle } from "lucide-react";
+import { Copy, Loader2, Mail, Sparkles, AlertCircle, Inbox, ShieldCheck } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,8 +29,10 @@ import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
 
 type Audience = "new" | "active" | "inactive";
+type InboxType = "promotional" | "primary";
 
-type EmailResult = {
+type PromotionalResult = {
+  inboxType: "promotional";
   subject: string;
   preview: string;
   header: string;
@@ -38,7 +40,29 @@ type EmailResult = {
   cta: string;
 };
 
+type PrimaryResult = {
+  inboxType: "primary";
+  subject: string;
+  preheader: string;
+  body: string;
+  cta: string;
+};
+
+type EmailResult = PromotionalResult | PrimaryResult;
+
+// Render simple **bold** markdown to <strong> elements.
+function renderInlineBold(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export function EmailGenerator() {
+  const [inboxType, setInboxType] = useState<InboxType>("promotional");
   const [offerDetails, setOfferDetails] = useState("");
   const [audience, setAudience] = useState<Audience>("active");
   const [brandName, setBrandName] = useState("");
@@ -78,6 +102,7 @@ export function EmailGenerator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          inboxType,
           offerDetails,
           audience,
           brandName: brandName.trim() || undefined,
@@ -118,8 +143,13 @@ export function EmailGenerator() {
 
   const fullEmail = useMemo(() => {
     if (!result) return "";
+    if (result.inboxType === "primary") {
+      return `Subject: ${result.subject}\nPreheader: ${result.preheader}\n\n${result.body}\n\nCTA Button: ${result.cta}`;
+    }
     return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}\n\nCTA Button: ${result.cta}`;
   }, [result]);
+
+  const isPrimary = inboxType === "primary";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -128,10 +158,55 @@ export function EmailGenerator() {
         <CardHeader>
           <CardTitle>Offer details</CardTitle>
           <CardDescription>
-            Describe what you are giving away and who you are talking to.
+            Pick an inbox type, then describe what you are giving away.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Inbox type selector */}
+          <div className="space-y-2">
+            <Label>Inbox type</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setInboxType("promotional")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors",
+                  inboxType === "promotional"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border bg-background hover:border-foreground/30",
+                )}
+                aria-pressed={inboxType === "promotional"}
+              >
+                <div className="flex items-center gap-2">
+                  <Inbox className="h-4 w-4" />
+                  <span className="text-sm font-semibold">Promotional</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Normal marketing email, spam-safe.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInboxType("primary")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors",
+                  inboxType === "primary"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border bg-background hover:border-foreground/30",
+                )}
+                aria-pressed={inboxType === "primary"}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="text-sm font-semibold">Primary</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Transactional style — lands in primary inbox.
+                </p>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="offer">
               Offer <span className="text-destructive">*</span>
@@ -143,77 +218,96 @@ export function EmailGenerator() {
                 setOfferDetails(e.target.value);
                 if (offerError) setOfferError(null);
               }}
-              placeholder='e.g. "Up to $8 free play, up to 35% discount, up to 200 XP, 20 free spins"'
+              placeholder={
+                isPrimary
+                  ? 'e.g. "New quests are live: 200 XP per quest, $2 in play credits, more bonus credits at level 5"'
+                  : 'e.g. "Up to $8 free play, up to 35% discount, up to 200 XP, 20 free spins"'
+              }
               className="min-h-[110px]"
               aria-invalid={!!offerError}
             />
             {offerError && <p className="text-xs text-destructive">{offerError}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="audience">Audience</Label>
-              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
-                <SelectTrigger id="audience">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">New users</SelectItem>
-                  <SelectItem value="active">Active users</SelectItem>
-                  <SelectItem value="inactive">Inactive users</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Promotional-only controls */}
+          {!isPrimary && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="audience">Audience</Label>
+                <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+                  <SelectTrigger id="audience">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">New users</SelectItem>
+                    <SelectItem value="active">Active users</SelectItem>
+                    <SelectItem value="inactive">Inactive users</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand name (optional)</Label>
+                <Input
+                  id="brand"
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  placeholder="Acme"
+                />
+              </div>
             </div>
+          )}
+
+          {!isPrimary && (
             <div className="space-y-2">
-              <Label htmlFor="brand">Brand name (optional)</Label>
+              <Label htmlFor="extra">Extra forbidden words (optional)</Label>
               <Input
-                id="brand"
-                value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
-                placeholder="Acme"
+                id="extra"
+                value={extraForbidden}
+                onChange={(e) => setExtraForbidden(e.target.value)}
+                placeholder="comma, separated, words"
               />
             </div>
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="extra">Extra forbidden words (optional)</Label>
-            <Input
-              id="extra"
-              value={extraForbidden}
-              onChange={(e) => setExtraForbidden(e.target.value)}
-              placeholder="comma, separated, words"
-            />
-          </div>
+          {!isPrimary && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Spam categories to filter</Label>
+                <span className="text-xs text-muted-foreground">
+                  {activeCategories.size} of {SPAM_CATEGORIES.length} on
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {SPAM_CATEGORIES.map((cat) => {
+                  const on = activeCategories.has(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                      )}
+                      aria-pressed={on}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Spam categories to filter</Label>
-              <span className="text-xs text-muted-foreground">
-                {activeCategories.size} of {SPAM_CATEGORIES.length} on
-              </span>
+          {isPrimary && (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Primary mode uses strict deliverability rules — no promotional language, no
+              emojis, transactional-style sign-off. Audience, brand, and spam-category
+              filters are ignored in this mode.
             </div>
-            <div className="flex flex-wrap gap-2">
-              {SPAM_CATEGORIES.map((cat) => {
-                const on = activeCategories.has(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => toggleCategory(cat.id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                      on
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground",
-                    )}
-                    aria-pressed={on}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           <Button onClick={handleGenerate} disabled={loading} className="w-full" size="lg">
             {loading ? (
@@ -260,7 +354,7 @@ export function EmailGenerator() {
 
         {!loading && !result && !errorMsg && <EmptyState />}
 
-        {result && (
+        {result && result.inboxType === "promotional" && (
           <>
             <OutputCard
               title="Subject line"
@@ -293,6 +387,61 @@ export function EmailGenerator() {
               onCopy={() => copy(result.cta, "CTA")}
               count={result.cta.length}
               limit={24}
+            />
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => copy(fullEmail, "Full email")}
+            >
+              <Copy className="h-4 w-4" />
+              Copy full email
+            </Button>
+          </>
+        )}
+
+        {result && result.inboxType === "primary" && (
+          <>
+            <OutputCard
+              title="Subject line"
+              value={result.subject}
+              onCopy={() => copy(result.subject, "Subject")}
+              count={result.subject.length}
+              limit={60}
+            />
+            <OutputCard
+              title="Preheader"
+              value={result.preheader}
+              onCopy={() => copy(result.preheader, "Preheader")}
+            />
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold">Email body</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copy(result.body, "Body")}
+                  className="h-8 px-2"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm leading-relaxed text-foreground">
+                  {result.body.split(/\n\n+/).map((para, i) => (
+                    <p key={i} className="whitespace-pre-wrap">
+                      {renderInlineBold(para)}
+                    </p>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <OutputCard
+              title="CTA button"
+              value={result.cta}
+              onCopy={() => copy(result.cta, "CTA")}
+              count={result.cta.length}
+              limit={28}
             />
             <Button
               variant="secondary"
@@ -389,7 +538,7 @@ function EmptyState() {
         </div>
         <p className="text-sm font-medium">Your email will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Fill in the offer on the left, pick your audience, and click generate.
+          Pick an inbox type, fill in the offer, and click generate.
         </p>
       </CardContent>
     </Card>
