@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Mail, Sparkles, AlertCircle, Inbox, ShieldCheck } from "lucide-react";
+import { Copy, Loader2, Mail, Sparkles, AlertCircle, Inbox, ShieldCheck, Smile } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
 
 type Audience = "new" | "active" | "inactive";
-type InboxType = "promotional" | "primary";
+type InboxType = "promotional" | "primary" | "friendly";
 
 type PromotionalResult = {
   inboxType: "promotional";
@@ -48,7 +48,15 @@ type PrimaryResult = {
   cta: string;
 };
 
-type EmailResult = PromotionalResult | PrimaryResult;
+type FriendlyResult = {
+  inboxType: "friendly";
+  subject: string;
+  preheader: string;
+  body: string;
+  cta: string;
+};
+
+type EmailResult = PromotionalResult | PrimaryResult | FriendlyResult;
 
 // Render simple **bold** markdown to <strong> elements.
 function renderInlineBold(text: string) {
@@ -143,13 +151,13 @@ export function EmailGenerator() {
 
   const fullEmail = useMemo(() => {
     if (!result) return "";
-    if (result.inboxType === "primary") {
+    if (result.inboxType === "primary" || result.inboxType === "friendly") {
       return `Subject: ${result.subject}\nPreheader: ${result.preheader}\n\n${result.body}\n\nCTA Button: ${result.cta}`;
     }
     return `Subject: ${result.subject}\nPreview: ${result.preview}\nHeader: ${result.header}\n\nBody:\n${result.body}\n\nCTA Button: ${result.cta}`;
   }, [result]);
 
-  const isPrimary = inboxType === "primary";
+  const isStrict = inboxType !== "promotional";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -168,7 +176,7 @@ export function EmailGenerator() {
           {/* Inbox type selector */}
           <div className="space-y-2">
             <Label>Inbox type</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={() => setInboxType("promotional")}
@@ -207,6 +215,25 @@ export function EmailGenerator() {
                   Higher deliverability, cleaner tone.
                 </p>
               </button>
+              <button
+                type="button"
+                onClick={() => setInboxType("friendly")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors",
+                  inboxType === "friendly"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border bg-background hover:border-foreground/30",
+                )}
+                aria-pressed={inboxType === "friendly"}
+              >
+                <div className="flex items-center gap-2">
+                  <Smile className="h-4 w-4" />
+                  <span className="text-sm font-semibold">Friendly</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Simple, easy-to-read tone.
+                </p>
+              </button>
             </div>
           </div>
 
@@ -222,7 +249,7 @@ export function EmailGenerator() {
                 if (offerError) setOfferError(null);
               }}
               placeholder={
-                isPrimary
+                isStrict
                   ? 'e.g. "New quests are live: 200 XP per quest, $2 in play credits, more bonus credits at level 5"'
                   : 'e.g. "Up to $8 free play, up to 35% discount, up to 200 XP, 20 free spins"'
               }
@@ -258,7 +285,7 @@ export function EmailGenerator() {
             </div>
           </div>
 
-          {!isPrimary && (
+          {!isStrict && (
             <div className="space-y-2">
               <Label htmlFor="extra">Extra forbidden words (optional)</Label>
               <Input
@@ -270,7 +297,7 @@ export function EmailGenerator() {
             </div>
           )}
 
-          {!isPrimary && (
+          {!isStrict && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Spam categories to filter</Label>
@@ -302,10 +329,9 @@ export function EmailGenerator() {
             </div>
           )}
 
-          {isPrimary && (
+          {isStrict && (
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Primary mode uses a tighter writing style for better deliverability. Brand
-              name and audience are still applied.
+              This mode uses a focused writing style. Brand name and audience are still applied.
             </div>
           )}
 
@@ -399,7 +425,7 @@ export function EmailGenerator() {
           </>
         )}
 
-        {result && result.inboxType === "primary" && (
+        {result && (result.inboxType === "primary" || result.inboxType === "friendly") && (
           <>
             <OutputCard
               title="Subject line"
