@@ -428,6 +428,8 @@ const FRIENDLY_TOOL = {
     },
   },
 };
+
+export const Route = createFileRoute("/api/generate-email")({
   server: {
     handlers: {
       POST: async ({ request }) => {
