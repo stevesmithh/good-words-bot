@@ -48,6 +48,9 @@ function Index() {
           <TabButton active={tab === "email"} onClick={() => setTab("email")}>
             <Mail className="h-4 w-4" />
             Email
+            <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+              v2.0
+            </span>
           </TabButton>
           <TabButton active={tab === "sms"} onClick={() => setTab("sms")}>
             <MessageSquare className="h-4 w-4" />
