@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
 
 type Audience = "new" | "active" | "inactive";
-type InboxType = "promotional" | "primary";
+type InboxType = "promotional" | "primary" | "friendly";
 
 type PromotionalResult = {
   inboxType: "promotional";
@@ -48,7 +48,15 @@ type PrimaryResult = {
   cta: string;
 };
 
-type EmailResult = PromotionalResult | PrimaryResult;
+type FriendlyResult = {
+  inboxType: "friendly";
+  subject: string;
+  preheader: string;
+  body: string;
+  cta: string;
+};
+
+type EmailResult = PromotionalResult | PrimaryResult | FriendlyResult;
 
 // Render simple **bold** markdown to <strong> elements.
 function renderInlineBold(text: string) {
