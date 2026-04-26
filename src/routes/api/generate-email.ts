@@ -468,7 +468,12 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
 
-          const inboxType: InboxType = body.inboxType === "primary" ? "primary" : "promotional";
+          const inboxType: InboxType =
+            body.inboxType === "primary"
+              ? "primary"
+              : body.inboxType === "friendly"
+                ? "friendly"
+                : "promotional";
 
           const prompt =
             inboxType === "primary"
@@ -477,9 +482,20 @@ export const Route = createFileRoute("/api/generate-email")({
                   audience: body.audience,
                   brandName: body.brandName,
                 })
-              : buildPromotionalPrompt(body);
+              : inboxType === "friendly"
+                ? buildFriendlyPrompt({
+                    offerDetails: body.offerDetails,
+                    audience: body.audience,
+                    brandName: body.brandName,
+                  })
+                : buildPromotionalPrompt(body);
 
-          const tool = inboxType === "primary" ? PRIMARY_TOOL : PROMOTIONAL_TOOL;
+          const tool =
+            inboxType === "primary"
+              ? PRIMARY_TOOL
+              : inboxType === "friendly"
+                ? FRIENDLY_TOOL
+                : PROMOTIONAL_TOOL;
           const toolName = tool.function.name;
 
           const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
