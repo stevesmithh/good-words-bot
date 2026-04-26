@@ -573,9 +573,9 @@ export const Route = createFileRoute("/api/generate-email")({
               .replace(/\\n/g, "\n")
               .replace(/\\t/g, "\t");
 
-          if (inboxType === "primary") {
+          if (inboxType === "primary" || inboxType === "friendly") {
             return Response.json({
-              inboxType: "primary",
+              inboxType,
               subject: parsed.subject ?? "",
               preheader: parsed.preheader ?? "",
               body: normalizeNewlines(parsed.body ?? ""),
