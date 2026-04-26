@@ -301,9 +301,8 @@ export function EmailGenerator() {
 
           {isPrimary && (
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Primary mode uses strict deliverability rules — no promotional language, no
-              emojis, transactional-style sign-off. Audience, brand, and spam-category
-              filters are ignored in this mode.
+              Primary mode uses a tighter writing style for better deliverability. Brand
+              name and audience are still applied.
             </div>
           )}
 
