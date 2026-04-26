@@ -161,12 +161,15 @@ export const Route = createFileRoute("/api/shortio")({
             const destinationUrl = promo.destination_url as string;
             const promoId = promo.id as string;
 
-            // 1. Look for an unused link
+            // 1. Look for an unused link that still matches the CURRENT short domain.
+            // If the admin changed the site's domain, old unused links must be skipped
+            // (and effectively retired) so new links use the updated domain.
             const { data: existing, error: lookupErr } = await supabase
               .from("sms_short_links")
               .select("id, short_url, destination_url")
               .eq("promotion_id", promoId)
               .eq("provider", body.provider)
+              .eq("short_domain", shortDomain)
               .is("used_at", null)
               .order("created_at", { ascending: true })
               .limit(1);
