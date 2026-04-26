@@ -153,8 +153,142 @@ IMPORTANT: Return your answer by calling the provided tool "return_primary_email
 - cta: the CTA button label only, 2–4 words, strong and clear (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
 }
 
+// =====================================================================
+// FRIENDLY INBOX PROMPT — used VERBATIM, every single time.
+// Do NOT edit, shorten, or paraphrase this prompt. Only the user's offer
+// details are appended at the bottom where the placeholder lives.
+// =====================================================================
+const FRIENDLY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
 
-function buildPromotionalPrompt(input: {
+Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
+
+### STRICT PHILOSOPHY (Never Break These Rules)
+
+- Primary inbox is the highest priority.
+
+- Sound like a helpful system/account message (like from a bank or useful app).
+
+- Never sound like marketing or sales.
+
+- Clarity is more important than persuasion.
+
+### FORBIDDEN WORDS & PHRASES (Completely Avoid)
+
+bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
+
+### NEW IMPORTANT RULE - EXTREME SIMPLICITY
+
+- Use very simple, everyday words.
+
+- Write like you are explaining to a 15-year-old student.
+
+- Use short sentences (maximum 15-20 words per sentence).
+
+- Use short paragraphs (2-3 lines max).
+
+- Make the email extremely easy to read and understand in under 10 seconds.
+
+- Avoid complex words. Use simple alternatives.
+
+- Make the message crystal clear so anyone can understand it immediately.
+
+### ALWAYS FOLLOW THIS EXACT STRUCTURE
+
+1. **Subject Line**
+
+   - Maximum 6-8 words
+
+   - Clear and action-oriented
+
+   - Sounds like an account update
+
+2. **Preheader** (1 short helpful sentence)
+
+3. **Email Body Structure**
+
+   - Personal greeting: "Hi {{ insert first_name 'default=default' }},"
+
+   - One short, warm opening line
+
+   - Clear explanation
+
+   - Bullet points for details (keep them very simple)
+
+   - One clear CTA button
+
+   - Helpful closing
+
+   - Sign-off: "Best regards, The BitPlay Team"
+
+### TONE GUIDELINES
+
+- Calm, friendly, and helpful
+
+- Very easy and natural language
+
+- Like talking to a friend who needs clear instructions
+
+### ADVANCED TECHNIQUES YOU MUST USE
+
+- Personalize with first name
+
+- Use bold for important numbers or codes (**$20**, **JOINUS**)
+
+- Create very clear flow: Thank you → What is new → What to do next
+
+- Make sure even a tired person can understand the email quickly
+
+- Keep total email short and scannable
+
+### OUTPUT FORMAT (Always use exactly this format)
+
+**Subject Line:**
+
+[Your subject here]
+
+**Preheader:**
+
+[Your preheader here]
+
+**Email Body:**
+
+[Full email with proper line breaks and markdown for bold]
+
+---
+
+Now, using all the rules above, create a high-quality, very easy-to-read email for the details I provide.
+
+[USER'S OFFER DETAILS GO HERE]`;
+
+function buildFriendlyPrompt(input: {
+  offerDetails: string;
+  audience: Audience;
+  brandName?: string;
+}) {
+  const filled = FRIENDLY_INBOX_PROMPT_TEMPLATE.replace(
+    "[USER'S OFFER DETAILS GO HERE]",
+    input.offerDetails,
+  );
+
+  const brandLine = input.brandName
+    ? `Brand name to use in the sign-off (replace "BitPlay" / "The BitPlay Team" with this brand): ${input.brandName}`
+    : "";
+  const audienceLine = `Audience context: ${AUDIENCE_LABEL[input.audience]}. Tone hint: ${AUDIENCE_TONE[input.audience]}`;
+
+  return `${filled}
+
+${audienceLine}
+${brandLine}
+
+IMPORTANT: Return your answer by calling the provided tool "return_friendly_email" with these fields:
+- subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
+- preheader: the Preheader text only (one short helpful sentence).
+- body: the full Email Body starting from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — the button label itself goes in the cta field.
+- cta: the CTA button label only, 2–4 words, simple and clear. No emojis.`;
+}
+
+
+
   offerDetails: string;
   audience: Audience;
   brandName?: string;
