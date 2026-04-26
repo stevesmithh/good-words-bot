@@ -229,33 +229,31 @@ export function EmailGenerator() {
             {offerError && <p className="text-xs text-destructive">{offerError}</p>}
           </div>
 
-          {/* Promotional-only controls */}
-          {!isPrimary && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="audience">Audience</Label>
-                <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
-                  <SelectTrigger id="audience">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New users</SelectItem>
-                    <SelectItem value="active">Active users</SelectItem>
-                    <SelectItem value="inactive">Inactive users</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand">Brand name (optional)</Label>
-                <Input
-                  id="brand"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  placeholder="Acme"
-                />
-              </div>
+          {/* Audience — used in both modes */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="audience">Audience</Label>
+              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+                <SelectTrigger id="audience">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New users</SelectItem>
+                  <SelectItem value="active">Active users</SelectItem>
+                  <SelectItem value="inactive">Inactive users</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="brand">Brand name (optional)</Label>
+              <Input
+                id="brand"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="Acme"
+              />
+            </div>
+          </div>
 
           {!isPrimary && (
             <div className="space-y-2">
