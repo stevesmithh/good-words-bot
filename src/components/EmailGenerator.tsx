@@ -176,7 +176,7 @@ export function EmailGenerator() {
           {/* Inbox type selector */}
           <div className="space-y-2">
             <Label>Inbox type</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={() => setInboxType("promotional")}
@@ -213,6 +213,25 @@ export function EmailGenerator() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Higher deliverability, cleaner tone.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInboxType("friendly")}
+                className={cn(
+                  "rounded-lg border p-3 text-left transition-colors",
+                  inboxType === "friendly"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border bg-background hover:border-foreground/30",
+                )}
+                aria-pressed={inboxType === "friendly"}
+              >
+                <div className="flex items-center gap-2">
+                  <Smile className="h-4 w-4" />
+                  <span className="text-sm font-semibold">Friendly</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Simple, easy-to-read tone.
                 </p>
               </button>
             </div>
