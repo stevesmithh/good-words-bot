@@ -154,7 +154,10 @@ export function EmailGenerator() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       {/* Form */}
-      <Card>
+      <Card className="relative">
+        <span className="absolute -top-2 -right-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold leading-none text-primary-foreground shadow-md">
+          v2.0
+        </span>
         <CardHeader>
           <CardTitle>Offer details</CardTitle>
           <CardDescription>
