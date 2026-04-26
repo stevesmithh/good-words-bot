@@ -182,9 +182,16 @@ function SitesEditor({ sites }: { sites: Site[] }) {
   const save = async (id: string) => {
     const patch = editing[id];
     if (!patch) return;
+    const current = sites.find((s) => s.id === id);
+    if (!current) return;
     setBusy(id);
     try {
-      await api("upsertSite", { id, ...patch });
+      await api("upsertSite", {
+        id,
+        name: current.name,
+        short_domain: current.short_domain,
+        ...patch,
+      });
       toast.success("Saved");
       setEditing((e) => {
         const { [id]: _, ...rest } = e;
