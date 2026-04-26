@@ -331,8 +331,7 @@ export function EmailGenerator() {
 
           {isStrict && (
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              Primary mode uses a tighter writing style for better deliverability. Brand
-              name and audience are still applied.
+              This mode uses a focused writing style. Brand name and audience are still applied.
             </div>
           )}
 
