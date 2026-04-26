@@ -249,7 +249,7 @@ export function EmailGenerator() {
                 if (offerError) setOfferError(null);
               }}
               placeholder={
-                isPrimary
+                isStrict
                   ? 'e.g. "New quests are live: 200 XP per quest, $2 in play credits, more bonus credits at level 5"'
                   : 'e.g. "Up to $8 free play, up to 35% discount, up to 200 XP, 20 free spins"'
               }
@@ -285,7 +285,7 @@ export function EmailGenerator() {
             </div>
           </div>
 
-          {!isPrimary && (
+          {!isStrict && (
             <div className="space-y-2">
               <Label htmlFor="extra">Extra forbidden words (optional)</Label>
               <Input
@@ -297,7 +297,7 @@ export function EmailGenerator() {
             </div>
           )}
 
-          {!isPrimary && (
+          {!isStrict && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Spam categories to filter</Label>
@@ -329,7 +329,7 @@ export function EmailGenerator() {
             </div>
           )}
 
-          {isPrimary && (
+          {isStrict && (
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               Primary mode uses a tighter writing style for better deliverability. Brand
               name and audience are still applied.
