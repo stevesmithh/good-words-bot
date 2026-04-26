@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SPAM_CATEGORIES, SAFE_REPLACEMENTS, type SpamCategoryId } from "@/lib/spam-words";
 
 type Audience = "new" | "active" | "inactive";
-type InboxType = "promotional" | "primary";
+type InboxType = "promotional" | "primary" | "friendly";
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
   new: "New users",
