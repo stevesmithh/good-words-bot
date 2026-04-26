@@ -287,8 +287,7 @@ IMPORTANT: Return your answer by calling the provided tool "return_friendly_emai
 - cta: the CTA button label only, 2–4 words, simple and clear. No emojis.`;
 }
 
-
-
+function buildPromotionalPrompt(input: {
   offerDetails: string;
   audience: Audience;
   brandName?: string;
