@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Loader2, Mail, Sparkles, AlertCircle, Inbox, ShieldCheck } from "lucide-react";
+import { Copy, Loader2, Mail, Sparkles, AlertCircle, Inbox, ShieldCheck, Smile } from "lucide-react";
 import {
   Card,
   CardContent,
