@@ -60,11 +60,21 @@ export async function callClaudeWithTool(
         error: "Rate limit reached. Please wait a moment and try again.",
       };
     }
-    if (resp.status === 401 || resp.status === 403) {
+    if (resp.status === 401) {
       return {
         ok: false,
-        status: resp.status,
+        status: 401,
         error: "AI authentication failed. Please check the API key.",
+        details: errText,
+      };
+    }
+    if (resp.status === 403) {
+      // 403 from Anthropic is usually content policy / permissions, not auth
+      return {
+        ok: false,
+        status: 403,
+        error: "Request rejected by AI provider. Details: " + errText.slice(0, 300),
+        details: errText,
       };
     }
     if (resp.status === 402 || /credit|balance|quota/i.test(errText)) {
