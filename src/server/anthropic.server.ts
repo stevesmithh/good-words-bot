@@ -1,5 +1,6 @@
-// Server-only helper for calling Anthropic Claude with tool use.
-// Takes an OpenAI-style tool definition and returns the parsed tool input.
+// Server-only helper for calling the Lovable AI Gateway (Gemini) with tool use.
+// Function name kept as `callClaudeWithTool` for backward compatibility with
+// existing route imports — under the hood it now uses Lovable AI / Gemini.
 
 export type OpenAITool = {
   type: "function";
@@ -14,40 +15,33 @@ export type AnthropicResult =
   | { ok: true; args: Record<string, unknown> }
   | { ok: false; status: number; error: string; details?: string };
 
-const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = "google/gemini-2.5-pro";
 
 export async function callClaudeWithTool(
   prompt: string,
   tool: OpenAITool,
 ): Promise<AnthropicResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
       status: 500,
-      error: "AI is not configured. ANTHROPIC_API_KEY missing.",
+      error: "AI is not configured. LOVABLE_API_KEY missing.",
     };
   }
 
-  const anthropicTool = {
-    name: tool.function.name,
-    description: tool.function.description,
-    input_schema: tool.function.parameters,
-  };
-
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+  const resp = await fetch(LOVABLE_AI_URL, {
     method: "POST",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 4096,
-      tools: [anthropicTool],
-      tool_choice: { type: "tool", name: tool.function.name },
+      model: MODEL,
       messages: [{ role: "user", content: prompt }],
+      tools: [tool],
+      tool_choice: { type: "function", function: { name: tool.function.name } },
     }),
   });
 
@@ -60,28 +54,19 @@ export async function callClaudeWithTool(
         error: "Rate limit reached. Please wait a moment and try again.",
       };
     }
-    if (resp.status === 401) {
-      return {
-        ok: false,
-        status: 401,
-        error: "AI authentication failed. Please check the API key.",
-        details: errText,
-      };
-    }
-    if (resp.status === 403) {
-      // 403 from Anthropic is usually content policy / permissions, not auth
-      return {
-        ok: false,
-        status: 403,
-        error: "Request rejected by AI provider. Details: " + errText.slice(0, 300),
-        details: errText,
-      };
-    }
-    if (resp.status === 402 || /credit|balance|quota/i.test(errText)) {
+    if (resp.status === 402) {
       return {
         ok: false,
         status: 402,
-        error: "AI credits finished. Please try again later.",
+        error: "AI credits finished. Please top up your Lovable workspace.",
+      };
+    }
+    if (resp.status === 401 || resp.status === 403) {
+      return {
+        ok: false,
+        status: resp.status,
+        error: "AI authentication failed.",
+        details: errText,
       };
     }
     return {
@@ -93,28 +78,39 @@ export async function callClaudeWithTool(
   }
 
   const data = (await resp.json()) as {
-    content?: Array<{
-      type: string;
-      name?: string;
-      input?: Record<string, unknown>;
-      text?: string;
+    choices?: Array<{
+      message?: {
+        tool_calls?: Array<{
+          function?: { name?: string; arguments?: string };
+        }>;
+        content?: string;
+      };
     }>;
   };
 
-  const toolUse = data.content?.find(
-    (b) => b.type === "tool_use" && b.name === tool.function.name,
+  const call = data.choices?.[0]?.message?.tool_calls?.find(
+    (c) => c.function?.name === tool.function.name,
   );
+  const argsStr = call?.function?.arguments;
 
-  if (!toolUse || !toolUse.input) {
-    const raw =
-      data.content?.find((b) => b.type === "text")?.text ?? JSON.stringify(data);
+  if (!argsStr) {
     return {
       ok: false,
       status: 502,
       error: "Could not parse response",
-      details: raw,
+      details: data.choices?.[0]?.message?.content ?? JSON.stringify(data),
     };
   }
 
-  return { ok: true, args: toolUse.input };
+  try {
+    const parsed = JSON.parse(argsStr) as Record<string, unknown>;
+    return { ok: true, args: parsed };
+  } catch {
+    return {
+      ok: false,
+      status: 502,
+      error: "Could not parse tool arguments",
+      details: argsStr,
+    };
+  }
 }
