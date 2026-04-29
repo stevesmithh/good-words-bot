@@ -523,8 +523,7 @@ export const Route = createFileRoute("/api/generate-email")({
             if (aiResp.status === 402) {
               return Response.json(
                 {
-                  error:
-                    "AI credits exhausted. Add credits to your Lovable workspace under Settings → Workspace → Usage.",
+                  error: "AI credits finished. Please try again later.",
                 },
                 { status: 402 },
               );
