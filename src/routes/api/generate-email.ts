@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SPAM_CATEGORIES, SAFE_REPLACEMENTS, type SpamCategoryId } from "@/lib/spam-words";
+import { callClaudeWithTool } from "@/server/anthropic.server";
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
@@ -460,14 +461,6 @@ export const Route = createFileRoute("/api/generate-email")({
             return Response.json({ error: "Too many categories." }, { status: 400 });
           }
 
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return Response.json(
-              { error: "AI is not configured. LOVABLE_API_KEY missing." },
-              { status: 500 },
-            );
-          }
-
           const inboxType: InboxType =
             body.inboxType === "primary"
               ? "primary"
@@ -496,75 +489,15 @@ export const Route = createFileRoute("/api/generate-email")({
               : inboxType === "friendly"
                 ? FRIENDLY_TOOL
                 : PROMOTIONAL_TOOL;
-          const toolName = tool.function.name;
 
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: [{ role: "user", content: prompt }],
-              tools: [tool],
-              tool_choice: { type: "function", function: { name: toolName } },
-            }),
-          });
-
-          if (!aiResp.ok) {
-            const errText = await aiResp.text().catch(() => "");
-            if (aiResp.status === 429) {
-              return Response.json(
-                { error: "Rate limit reached. Please wait a moment and try again." },
-                { status: 429 },
-              );
-            }
-            if (aiResp.status === 402) {
-              return Response.json(
-                {
-                  error: "AI credits finished. Please try again later.",
-                },
-                { status: 402 },
-              );
-            }
+          const result = await callClaudeWithTool(prompt, tool);
+          if (!result.ok) {
             return Response.json(
-              { error: `AI gateway error ${aiResp.status}`, details: errText },
-              { status: aiResp.status },
+              { error: result.error, ...(result.details ? { details: result.details } : {}) },
+              { status: result.status },
             );
           }
-
-          const data = (await aiResp.json()) as {
-            choices?: Array<{
-              message?: {
-                content?: string | null;
-                tool_calls?: Array<{
-                  function?: { name?: string; arguments?: string };
-                }>;
-              };
-            }>;
-          };
-
-          const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-          const argsStr = toolCall?.function?.arguments;
-
-          if (!argsStr) {
-            const raw = data.choices?.[0]?.message?.content ?? "";
-            return Response.json(
-              { error: "Could not parse response", raw: raw || JSON.stringify(data) },
-              { status: 502 },
-            );
-          }
-
-          let parsed: Record<string, string>;
-          try {
-            parsed = JSON.parse(argsStr);
-          } catch {
-            return Response.json(
-              { error: "Could not parse response", raw: argsStr },
-              { status: 502 },
-            );
-          }
+          const parsed = result.args as Record<string, string>;
 
           const normalizeNewlines = (s: string) =>
             s
