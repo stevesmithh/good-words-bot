@@ -235,137 +235,62 @@ export const Route = createFileRoute("/api/generate-sms")({
             }
           }
 
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return Response.json(
-              { error: "AI is not configured. LOVABLE_API_KEY missing." },
-              { status: 500 },
-            );
-          }
-
           const prompt = buildPrompt(body);
 
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
-              messages: [{ role: "user", content: prompt }],
-              tools: [
-                {
-                  type: "function",
-                  function: {
-                    name: "return_sms",
-                    description: "Return six SMS variants: 3 standard + 3 casual.",
-                    parameters: {
-                      type: "object",
-                      properties: {
-                        message: {
-                          type: "string",
-                          description:
-                            "Primary STANDARD SMS — clean, polished, professional. Link at end.",
-                        },
-                        standardA: {
-                          type: "string",
-                          description:
-                            "Standard variant A — informative angle, leads with what they get. Polished tone. Link at end.",
-                        },
-                        standardB: {
-                          type: "string",
-                          description:
-                            "Standard variant B — benefit-led angle, leads with outcome. Polished tone. Link at end.",
-                        },
-                        casualA: {
-                          type: "string",
-                          description:
-                            "Casual variant A — daily US text style, curiosity hook. Pick opener from: 'okay so', 'wait —', 'you're gonna want to see this', 'this is kinda wild', 'hold up', 'saw this and thought of you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
-                        },
-                        casualB: {
-                          type: "string",
-                          description:
-                            "Casual variant B — daily US text style, friend-recommendation tone. Pick opener from: 'heads up —', 'thought you'd want this', 'passing this along', 'worth a peek', 'this one's for you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
-                        },
-                        casualC: {
-                          type: "string",
-                          description:
-                            "Casual variant C — daily US text style, low-key FYI tone. Pick opener from: 'fyi', 'quick one', 'real quick', 'psst', 'just dropped', 'live now', 'k so this just popped up'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
-                        },
-                      },
-                      required: ["message", "standardA", "standardB", "casualA", "casualB", "casualC"],
-                      additionalProperties: false,
-                    },
+          const SMS_TOOL = {
+            type: "function" as const,
+            function: {
+              name: "return_sms",
+              description: "Return six SMS variants: 3 standard + 3 casual.",
+              parameters: {
+                type: "object",
+                properties: {
+                  message: {
+                    type: "string",
+                    description:
+                      "Primary STANDARD SMS — clean, polished, professional. Link at end.",
+                  },
+                  standardA: {
+                    type: "string",
+                    description:
+                      "Standard variant A — informative angle, leads with what they get. Polished tone. Link at end.",
+                  },
+                  standardB: {
+                    type: "string",
+                    description:
+                      "Standard variant B — benefit-led angle, leads with outcome. Polished tone. Link at end.",
+                  },
+                  casualA: {
+                    type: "string",
+                    description:
+                      "Casual variant A — daily US text style, curiosity hook. Pick opener from: 'okay so', 'wait —', 'you're gonna want to see this', 'this is kinda wild', 'hold up', 'saw this and thought of you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
+                  },
+                  casualB: {
+                    type: "string",
+                    description:
+                      "Casual variant B — daily US text style, friend-recommendation tone. Pick opener from: 'heads up —', 'thought you'd want this', 'passing this along', 'worth a peek', 'this one's for you'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
+                  },
+                  casualC: {
+                    type: "string",
+                    description:
+                      "Casual variant C — daily US text style, low-key FYI tone. Pick opener from: 'fyi', 'quick one', 'real quick', 'psst', 'just dropped', 'live now', 'k so this just popped up'. Must NOT share a first word with any other variant. Avoid 'ngl'. Never use the word 'code'.",
                   },
                 },
-              ],
-              tool_choice: { type: "function", function: { name: "return_sms" } },
-            }),
-          });
-
-          if (!aiResp.ok) {
-            const errText = await aiResp.text().catch(() => "");
-            if (aiResp.status === 429) {
-              return Response.json(
-                { error: "Rate limit reached. Please wait a moment and try again." },
-                { status: 429 },
-              );
-            }
-            if (aiResp.status === 402) {
-              return Response.json(
-                {
-                  error: "AI credits finished. Please try again later.",
-                },
-                { status: 402 },
-              );
-            }
-            return Response.json(
-              { error: `AI gateway error ${aiResp.status}`, details: errText },
-              { status: aiResp.status },
-            );
-          }
-
-          const data = (await aiResp.json()) as {
-            choices?: Array<{
-              message?: {
-                content?: string | null;
-                tool_calls?: Array<{
-                  function?: { name?: string; arguments?: string };
-                }>;
-              };
-            }>;
+                required: ["message", "standardA", "standardB", "casualA", "casualB", "casualC"],
+                additionalProperties: false,
+              },
+            },
           };
 
-          const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-          const argsStr = toolCall?.function?.arguments;
-
-          if (!argsStr) {
-            const raw = data.choices?.[0]?.message?.content ?? "";
+          const result = await callClaudeWithTool(prompt, SMS_TOOL);
+          if (!result.ok) {
             return Response.json(
-              { error: "Could not parse response", raw: raw || JSON.stringify(data) },
-              { status: 502 },
+              { error: result.error, ...(result.details ? { details: result.details } : {}) },
+              { status: result.status },
             );
           }
 
-          let parsed: {
-            message: string;
-            standardA: string;
-            standardB: string;
-            casualA: string;
-            casualB: string;
-            casualC: string;
-          };
-          try {
-            parsed = JSON.parse(argsStr);
-          } catch {
-            return Response.json(
-              { error: "Could not parse response", raw: argsStr },
-              { status: 502 },
-            );
-          }
-
-          return Response.json(parsed);
+          return Response.json(result.args);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
           return Response.json({ error: message }, { status: 500 });
