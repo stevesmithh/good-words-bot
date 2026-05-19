@@ -69,6 +69,7 @@ const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
   { id: "deposit_coupon", label: "Deposit coupon", desc: "Code for deposit bonus" },
   { id: "deposit_bonus", label: "Deposit bonus", desc: "1st / 2nd / 3rd" },
   { id: "signup_promo", label: "Signup promo", desc: "Code for signup" },
+  { id: "non_spam", label: "Non-Spam", desc: "Transactional, carrier-safe" },
 ];
 
 function segmentInfo(text: string) {
