@@ -44,7 +44,7 @@ type Promotion = {
 };
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
 
@@ -55,6 +55,9 @@ type SmsResult = {
   casualA: string;
   casualB: string;
   casualC: string;
+  nospamA?: string;
+  nospamB?: string;
+  nospamC?: string;
 };
 
 type ShortLinkInfo = {
@@ -69,8 +72,8 @@ const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
   { id: "deposit_coupon", label: "Deposit coupon", desc: "Code for deposit bonus" },
   { id: "deposit_bonus", label: "Deposit bonus", desc: "1st / 2nd / 3rd" },
   { id: "signup_promo", label: "Signup promo", desc: "Code for signup" },
-  { id: "non_spam", label: "Non-Spam", desc: "Transactional, carrier-safe" },
 ];
+
 
 function segmentInfo(text: string) {
   const len = text.length;
@@ -160,7 +163,7 @@ export function SmsGenerator() {
     if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
     if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
     if (smsType === "deposit_bonus" && !bonusAmount.trim()) e.bonus = "Required.";
-    if (smsType === "non_spam" && !promoCode.trim()) e.promo = "Required.";
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -205,7 +208,7 @@ export function SmsGenerator() {
         smsType,
         offerDetails,
         audience,
-        brandName: smsType === "non_spam" ? undefined : (brandName.trim() || undefined),
+        brandName: brandName.trim() || undefined,
         ctaLink: link.shortUrl,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
@@ -223,10 +226,6 @@ export function SmsGenerator() {
       if (smsType === "signup_promo") {
         payload.promoCode = promoCode.trim();
         payload.freePlayReward = freePlayReward.trim() || undefined;
-      }
-      if (smsType === "non_spam") {
-        payload.promoCode = promoCode.trim();
-        payload.bonusDescription = bonusAmount.trim() || undefined;
       }
 
       const resp = await fetch("/api/generate-sms", {
@@ -289,15 +288,20 @@ export function SmsGenerator() {
 
   const allVariants = useMemo(() => {
     if (!result) return "";
-    return [
+    const parts = [
       `Standard — Primary:\n${result.message}`,
       `Standard A:\n${result.standardA}`,
       `Standard B:\n${result.standardB}`,
       `Casual A:\n${result.casualA}`,
       `Casual B:\n${result.casualB}`,
       `Casual C:\n${result.casualC}`,
-    ].join("\n\n");
+    ];
+    if (result.nospamA) parts.push(`No-Spam A:\n${result.nospamA}`);
+    if (result.nospamB) parts.push(`No-Spam B:\n${result.nospamB}`);
+    if (result.nospamC) parts.push(`No-Spam C:\n${result.nospamC}`);
+    return parts.join("\n\n");
   }, [result]);
+
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -511,40 +515,6 @@ export function SmsGenerator() {
             </div>
           )}
 
-          {smsType === "non_spam" && (
-            <div className="space-y-3">
-              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-                Transactional account-notification style. Reads like a system message — no brand, no promo language, neutral vocabulary only. Designed to maximize US carrier deliverability.
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="nsPromo">
-                    Promo code <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="nsPromo"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="MEGAGEM40"
-                    aria-invalid={!!errors.promo}
-                  />
-                  {errors.promo && <p className="text-xs text-destructive">{errors.promo}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nsRef">Value reference (optional)</Label>
-                  <Input
-                    id="nsRef"
-                    value={bonusAmount}
-                    onChange={(e) => setBonusAmount(e.target.value)}
-                    placeholder="40"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Mentioned only as a neutral reference (e.g. "tier 40 credit"). No %, $, or "bonus".
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="smsOffer">
@@ -780,6 +750,49 @@ export function SmsGenerator() {
               onCopy={() => copy(result.casualC, "Casual C")}
               onMarkUsed={handleMarkUsed}
             />
+
+
+
+
+            {(result.nospamA || result.nospamB || result.nospamC) && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    No-Spam
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.nospamA && (
+                  <SmsCard
+                    title="No-Spam A"
+                    value={result.nospamA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamA!, "No-Spam A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.nospamB && (
+                  <SmsCard
+                    title="No-Spam B"
+                    value={result.nospamB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamB!, "No-Spam B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.nospamC && (
+                  <SmsCard
+                    title="No-Spam C"
+                    value={result.nospamC}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamC!, "No-Spam C")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
+
+
 
             <Button
               variant="secondary"

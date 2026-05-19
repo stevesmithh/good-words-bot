@@ -115,7 +115,9 @@ ${input.bonusDescription ? `- If a value is mentioned, encode it as a neutral re
       ? "Message text MUST be under 160 characters TOTAL including the link. Aim for 10-15 words."
       : "Message text should be 10-15 words plus the link at the end. Total ideally under 200 characters.";
 
+
   if (input.smsType === "non_spam") {
+    const codeValue = input.promoCode || input.couponCode || "";
     const linkBlock = input.ctaLink && input.ctaLink.trim()
       ? `LINK HANDLING:
 - The link is: ${input.ctaLink}
@@ -127,24 +129,36 @@ ${input.bonusDescription ? `- If a value is mentioned, encode it as a neutral re
 - Do NOT include any URL in any variant.
 - End each message with a neutral closing word like "available", "applied", or "active".`;
 
-    return `You are writing US-bound bulk SMS that MUST pass mobile carrier spam filters (AT&T, Verizon, T-Mobile). These messages must read like an automatic TRANSACTIONAL ACCOUNT NOTIFICATION — the kind of system message a user receives from their bank, utility, or account dashboard. They are NOT promotional and must not look promotional.
+    const codeBlock = codeValue
+      ? `- MUST include this value verbatim in every variant: ${codeValue}
+- Reference it neutrally, e.g. "apply ${codeValue}", "use ${codeValue}", "reference: ${codeValue}", or "${codeValue}".
+- NEVER write the literal word "code" before or after it.`
+      : `- Do NOT include any code, coupon, or promo value. Reference only the account/balance update itself.`;
+
+    const valueBlock = input.bonusDescription
+      ? `- If a value is mentioned, encode it as a neutral reference like "tier ${input.bonusDescription} credit" or "level ${input.bonusDescription} allocation". NEVER use "%", "$", "bonus", "free", "freeplay".`
+      : `- Do NOT mention any bonus, percentage, dollar amount, or freeplay value.`;
+
+    return `You are writing US-bound bulk SMS that MUST pass mobile carrier spam filters (AT&T, Verizon, T-Mobile). These messages must read like an automatic account/system notification — the kind of system message a user receives from their bank, utility, or account dashboard. They are NOT promotional and must not look promotional.
 
 Audience: ${AUDIENCE_LABEL[input.audience]}
 Offer context (for your reference only — DO NOT use marketing words from it): ${input.offerDetails}
 
-${typeRules}
+ACCOUNT-NOTIFICATION STYLE — STRICT:
+${codeBlock}
+${valueBlock}
 
 LENGTH: Each message under 200 characters TOTAL including the link.
 
-TRANSACTIONAL VOICE — STRICT:
+VOICE — STRICT:
 - Tone: neutral, factual, third-person account-system notification.
 - Style references (mirror this register):
-  · "A balance enhancement is currently available on your account. Apply ${input.promoCode || "REF40"} to continue: link"
-  · "Your account is eligible for an additional balance credit today. Use ${input.promoCode || "REF40"} during checkout. Access: link"
-  · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${input.promoCode || "REF40"} - link"
+  · "A balance enhancement is currently available on your account. Apply ${codeValue || "REF40"} to continue: link"
+  · "Your account is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
+  · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${codeValue || "REF40"} - link"
 - Allowed vocabulary: balance, account, credit, allocation, adjustment, enhancement, tier, level, reference, profile, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
-- Capitalization: Standard sentence case. The promo code stays in its original case (uppercase OK because it's a reference, not shouting).
-- Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than the promo code itself).
+- Capitalization: Standard sentence case. Any code value stays in its original case.
+- Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than a code value itself).
 - No brand name. No greeting ("Hi", "Hey"). No sign-off.
 
 ${linkBlock}
@@ -157,23 +171,18 @@ SAFE REPLACEMENTS:
 ${replacementLines}
 
 HARD RULES:
-- NEVER use the literal English word "code" (or "promo code", "use code"). Reference the value directly: "apply ${input.promoCode || "REF40"}", "use ${input.promoCode || "REF40"}", "reference: ${input.promoCode || "REF40"}".
-- The promo value ${input.promoCode ? `"${input.promoCode}"` : ""} MUST appear verbatim in every variant.
+- NEVER use the literal English word "code" (or "promo code", "use code").
 - No marketing language. No urgency. No superlatives. No emoji.
 - Each variant must sound like a system-generated account notice.
 
-VARIANTS — return SIX messages, all transactional account-notification style. Each MUST start with a different opening structure so carriers don't dedupe:
-- "message": "A balance enhancement is currently available on your account..."
-- "standardA": "Your account is eligible for an additional balance credit..."
-- "standardB": "Your profile currently qualifies for an adjusted credit allocation..."
-- "casualA": "An adjusted credit allocation has been applied to your account..."
-- "casualB": "A pending balance update is available for your review..."
-- "casualC": "Your account currently has an active credit reference..."
-
-Treat all six as TRANSACTIONAL — do NOT use any casual / slang voice for casualA/B/C. The field names are kept for compatibility only.
+VARIANTS — return THREE messages, each with a different opening structure so carriers don't dedupe:
+- "nospamA": "A balance enhancement is currently available on your account..."
+- "nospamB": "Your profile currently qualifies for an adjusted credit allocation..."
+- "nospamC": "An adjusted balance update has been applied to your account..."
 
 Return your answer using the provided tool.`;
   }
+
 
   return `You are writing bulk SMS for a US audience. The goal: messages that read like a real person texting a friend in everyday American English — casual, intriguing, and human — while passing US carrier spam filters (AT&T, Verizon, T-Mobile).
 
@@ -295,9 +304,6 @@ export const Route = createFileRoute("/api/generate-sms")({
           if (body.smsType === "signup_promo" && !body.promoCode?.trim()) {
             return Response.json({ error: "Promo code is required." }, { status: 400 });
           }
-          if (body.smsType === "non_spam" && !body.promoCode?.trim()) {
-            return Response.json({ error: "Promo code is required." }, { status: 400 });
-          }
           if (body.smsType === "deposit_bonus") {
             if (!body.depositOrdinal) {
               return Response.json({ error: "Deposit ordinal is required." }, { status: 400 });
@@ -308,6 +314,7 @@ export const Route = createFileRoute("/api/generate-sms")({
           }
 
           const prompt = buildPrompt(body);
+          const nospamPrompt = buildPrompt({ ...body, smsType: "non_spam" });
 
           const SMS_TOOL = {
             type: "function" as const,
@@ -354,7 +361,28 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
-          const result = await callClaudeWithTool(prompt, SMS_TOOL);
+          const NOSPAM_TOOL = {
+            type: "function" as const,
+            function: {
+              name: "return_nospam",
+              description: "Return three account-notification style SMS variants.",
+              parameters: {
+                type: "object",
+                properties: {
+                  nospamA: { type: "string", description: "Account-notification variant A. Starts with 'A balance enhancement...'. Never uses the word 'code'." },
+                  nospamB: { type: "string", description: "Account-notification variant B. Starts with 'Your profile currently qualifies...'. Never uses the word 'code'." },
+                  nospamC: { type: "string", description: "Account-notification variant C. Starts with 'An adjusted balance update...'. Never uses the word 'code'." },
+                },
+                required: ["nospamA", "nospamB", "nospamC"],
+                additionalProperties: false,
+              },
+            },
+          };
+
+          const [result, nospamResult] = await Promise.all([
+            callClaudeWithTool(prompt, SMS_TOOL),
+            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL),
+          ]);
           if (!result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
@@ -362,7 +390,14 @@ export const Route = createFileRoute("/api/generate-sms")({
             );
           }
 
-          return Response.json(result.args);
+          const merged = {
+            ...result.args,
+            ...(nospamResult.ok
+              ? nospamResult.args
+              : { nospamA: "", nospamB: "", nospamC: "" }),
+          };
+          return Response.json(merged);
+
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
           return Response.json({ error: message }, { status: 500 });
