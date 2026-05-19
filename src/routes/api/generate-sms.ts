@@ -100,7 +100,13 @@ ${input.couponCode ? `- Include the coupon value verbatim: ${input.couponCode}. 
 - NEVER write the word "code" before or after it. Do NOT write "promo code ${input.promoCode}" or "use code ${input.promoCode}".
 - Reward on signup: ${input.freePlayReward || "free play"}`;
       break;
-  }
+    case "non_spam":
+      typeRules = `SMS type: NON-SPAM transactional account notification.
+- MUST include the promo value verbatim: ${input.promoCode}
+- Reference it neutrally, e.g. "apply ${input.promoCode}", "use ${input.promoCode}", "reference: ${input.promoCode}", "${input.promoCode}".
+- NEVER write the word "code" before or after it.
+${input.bonusDescription ? `- If a value is mentioned, encode it as a neutral reference like "tier ${input.bonusDescription} credit" or "level ${input.bonusDescription} allocation". NEVER use "%", "$", "bonus", "free", "freeplay".` : "- Do NOT mention any bonus, percentage, dollar amount, or freeplay value."}`;
+      break;
 
   const lengthRule =
     input.lengthTarget === "short"
