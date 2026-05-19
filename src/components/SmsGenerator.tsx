@@ -213,7 +213,9 @@ export function SmsGenerator() {
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
+        siteId: siteId || undefined,
       };
+
       if (smsType === "deposit_coupon") {
         payload.couponCode = couponCode.trim();
         payload.bonusDescription = bonusDescription.trim() || undefined;
