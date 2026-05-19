@@ -44,7 +44,7 @@ type Promotion = {
 };
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
 
