@@ -749,6 +749,9 @@ export function SmsGenerator() {
               shortLink={shortLink}
               onCopy={() => copy(result.casualC, "Casual C")}
               onMarkUsed={handleMarkUsed}
+            />
+
+
 
 
             {(result.nospamA || result.nospamB || result.nospamC) && (
