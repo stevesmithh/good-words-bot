@@ -115,17 +115,6 @@ ${input.bonusDescription ? `- If a value is mentioned, encode it as a neutral re
       ? "Message text MUST be under 160 characters TOTAL including the link. Aim for 10-15 words."
       : "Message text should be 10-15 words plus the link at the end. Total ideally under 200 characters.";
 
-  if (input.smsType === "non_spam") {
-    const linkBlock = input.ctaLink && input.ctaLink.trim()
-      ? `LINK HANDLING:
-- The link is: ${input.ctaLink}
-- Place the link at the very end of each message.
-- Separate it from the preceding text with either " " (single space), ": " (colon-space), or " - " (space-dash-space) — vary across variants.
-- Do NOT rewrite, shorten, or modify the link.
-- Do NOT use words like "click here", "tap here", "click link".`
-      : `NO LINK:
-- Do NOT include any URL in any variant.
-- End each message with a neutral closing word like "available", "applied", or "active".`;
 
   if (input.smsType === "non_spam") {
     const codeValue = input.promoCode || input.couponCode || "";
