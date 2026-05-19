@@ -341,8 +341,38 @@ export const Route = createFileRoute("/api/generate-sms")({
             }
           }
 
-          const prompt = buildPrompt(body);
-          const nospamPrompt = buildPrompt({ ...body, smsType: "non_spam" });
+          const siteId = body.siteId?.trim() || null;
+
+          // Per-request creative seeds + recent-output memory (parallel fetch)
+          const stdCasualSeed: StandardCasualSeed = makeStandardCasualSeed();
+          const nospamSeed: NoSpamSeed = makeNoSpamSeed();
+
+          const [recentStandard, recentCasual, recentNospam] = await Promise.all([
+            fetchRecentTexts(siteId, body.smsType, "standard", 12),
+            fetchRecentTexts(siteId, body.smsType, "casual", 12),
+            fetchRecentTexts(siteId, "non_spam", "nospam", 12),
+          ]);
+
+          const stdCasualSeedBlock = renderStandardCasualSeedBlock(stdCasualSeed);
+          const stdCasualRecentBlock = [
+            renderRecentTextsBlock("STANDARD", recentStandard),
+            renderRecentTextsBlock("CASUAL", recentCasual),
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+
+          const nospamSeedBlock = renderNoSpamSeedBlock(nospamSeed);
+          const nospamRecentBlock = renderRecentTextsBlock("ACCOUNT-NOTIFICATION", recentNospam);
+
+          const prompt = buildPrompt(body, {
+            seedBlock: stdCasualSeedBlock,
+            recentBlock: stdCasualRecentBlock,
+          });
+          const nospamPrompt = buildPrompt(
+            { ...body, smsType: "non_spam" },
+            { seedBlock: nospamSeedBlock, recentBlock: nospamRecentBlock },
+          );
+
 
           const SMS_TOOL = {
             type: "function" as const,
