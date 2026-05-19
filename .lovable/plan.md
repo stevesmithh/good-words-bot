@@ -1,74 +1,68 @@
-# Login + Credits Usage Tracking
+# Add "Non-Spam" SMS type (transactional-style copy)
 
-Add a simple shared-password login gate to the app and track every generation per user. Add an admin dashboard (steve) to review usage and manage team credentials.
+Add a new SMS type that produces messages reading like a transactional account notification rather than a promo. Goal: maximize pass-through on US carrier spam filters (AT&T, Verizon, T-Mobile).
 
-## How it will work
+## What the user picks
 
-- A login screen blocks access to the entire app. Each team member signs in with their personal username + password.
-- After login, the app works exactly as today, but every Email/SMS generation is recorded against that user (username + timestamp + type).
-- Steve gets an extra "Team usage" tab in the existing Admin Editor where he can:
-  - See total generations per user with date filters: Today, Yesterday, Last 7 days, Custom range.
-  - See a list of all team members with their current login + password.
-  - Add / edit / delete team members (change username, change password, mark as admin).
-- Logout button shown in the header next to the current user's name.
+In the existing SMS Type selector (alongside Promotional / Deposit coupon / Deposit bonus / Signup promo) add:
 
-## Initial team members (seeded)
+- **Non-Spam** — Transactional-style account message, max carrier-safe
 
-| Username | Password         | Role  |
-|----------|------------------|-------|
-| alice    | alice0125@       | user  |
-| natalie  | natalie8771@     | user  |
-| romeo    | romeo98771@      | user  |
-| leo      | leo18882@        | user  |
-| steve    | steve01001@      | admin |
-| chris    | chris6001@       | user  |
+When selected, the form keeps the same fields but:
+- Brand name field is hidden (brand is intentionally not mentioned)
+- Promo code field is shown (and required) — the code is the only "marketing" element kept
+- Bonus % / freeplay field is shown but optional, and used as a *neutral reference* only (e.g. "tier 40 credit") — never with `$`, `%`, "bonus", "free"
 
-Steve can change any of these from the admin panel later.
+## Content rules for Non-Spam
 
-## Technical details
+Every variant must read like a balance/account notification. Style references:
 
-### Database (new tables)
+- "A balance enhancement is currently available on your account. Apply MEGAGEM40 to continue: link"
+- "Your account is eligible for an additional balance credit today. Use MEGAGEM40 during checkout. Access: link"
+- "Your profile currently qualifies for an adjusted credit allocation. Reference: MEGAGEM40 - link"
 
-- `team_members` — `id uuid pk`, `username text unique`, `password text`, `is_admin bool`, `created_at`, `updated_at`. RLS: no public access (only reached via server functions).
-- `generation_events` — `id uuid pk`, `username text`, `kind text ('email'|'sms')`, `created_at timestamptz default now()`. RLS: no public access.
-- Seed the 6 users via a one-time `INSERT` in the migration.
+Hard constraints layered on top of existing forbidden-word logic:
 
-Passwords are stored in plaintext because the user wants to view/edit them in the admin panel. This is an internal team tool, not a public auth system — we'll note the tradeoff but follow the requested design.
+- Tone: account/system notification. Neutral, factual, third-person. No casual/slang variants.
+- No brand name. No emoji. No exclamation marks. No urgency.
+- Forbid (in addition to existing list): `bonus`, `free`, `freeplay`, `deposit`, `win`, `winner`, `cash`, `prize`, `reward`, `gift`, `offer`, `promo`, `promotion`, `discount`, `exclusive`, `limited`, `claim`, `unlock`, `congratulations`, `eligible to win`, `$`, `%`, ALL CAPS words (other than the promo code itself).
+- Allowed neutral vocabulary: "balance", "account", "credit", "allocation", "adjustment", "enhancement", "tier", "reference", "profile", "qualifies", "eligible", "available", "apply", "use", "access", "continue".
+- Promo code MUST appear verbatim, referenced naturally ("apply MEGAGEM40", "use MEGAGEM40", "reference: MEGAGEM40"). The word "code" is already globally forbidden — that stays.
+- If bonus value is provided, encode it as a neutral reference like "tier 40 credit" / "level 40 allocation" — never "40% bonus" or "$40 free".
+- Link sits at the end after a single space or `:` / `-` separator (the example uses both — allow either).
+- Length: under 200 chars total including link.
 
-### Auth gate (client + server)
+## Variants returned
 
-- Reuse the existing `/api/admin` pattern. New server route `/api/auth` with actions:
-  - `login` → verify username+password against `team_members`, return `{ username, isAdmin }` on success.
-  - `listMembers` / `upsertMember` / `deleteMember` → admin-only (verified via `adminCode` OR via posting the admin's own username+password again on each call).
-  - `usage` → admin-only, returns counts grouped by username, filtered by date range.
-- Session: store `{ username, isAdmin }` in `localStorage` after successful login. A new `<AuthGate>` wrapper in `src/routes/__root.tsx` (or in `src/routes/index.tsx`) renders a login form when no session is present.
-- Logout: clears localStorage and reloads.
+For Non-Spam, return SIX variants in the same shape as today, but all six use the transactional account-notification style — no casual variants. Each variant uses a different opening structure so carriers don't dedupe:
 
-### Logging generations
+- `message` — "A balance enhancement is currently available on your account..."
+- `standardA` — "Your account is eligible for..."
+- `standardB` — "Your profile currently qualifies for..."
+- `casualA` — "An adjusted credit allocation has been applied to your account..."
+- `casualB` — "A pending balance update is available for your review..."
+- `casualC` — "Your account currently has an active credit reference..."
 
-- Add a tiny helper `logGeneration(username, kind)` called from `src/routes/api/generate-email.ts` and `src/routes/api/generate-sms.ts` right after a successful generation. Username is passed in the request body from the client (read from localStorage).
-- Server inserts a row into `generation_events` using the admin Supabase client.
+(Field names stay the same so the existing UI rendering keeps working — only the content style changes for this type.)
 
-### Admin dashboard
+## Technical changes
 
-- Extend `src/components/AdminEditor.tsx` with a new "Team & Usage" tab visible only when `isAdmin === true`.
-- Two sub-sections:
-  1. **Usage**: date filter (Today / Yesterday / 7d / Custom) → table of `username | email count | sms count | total`.
-  2. **Members**: editable table of `username | password | admin?` with add/delete/save buttons.
+1. `src/routes/api/generate-sms.ts`
+   - Extend `SmsType` union with `"non_spam"`.
+   - Add a `case "non_spam"` branch in `buildPrompt` with the transactional rules above and the extended forbidden list.
+   - Skip the casual VOICE / DIVERSITY blocks for `non_spam`; replace with a TRANSACTIONAL VOICE block.
+   - Validation: require `promoCode` for `non_spam`.
 
-### Files to add / change
+2. `src/components/SmsGenerator.tsx`
+   - Add `"non_spam"` to `SmsType` and to `SMS_TYPES` with label "Non-Spam" and desc "Transactional, carrier-safe".
+   - Show the promo code input when `smsType === "non_spam"` (reuse existing `promoCode` field & error key).
+   - Optional: show a small helper note under the type tile when selected.
+   - Hide the brand name field when `non_spam` is selected (or just don't send it).
+   - In the submit payload, send `smsType: "non_spam"` and the promo code.
 
-- `supabase` migration: create the two tables, RLS policies, seed rows.
-- `src/routes/api/auth.ts` — new server route.
-- `src/lib/session.ts` — small client helper for getting/setting current user in localStorage.
-- `src/components/AuthGate.tsx` — login screen + wrapper.
-- `src/routes/__root.tsx` — wrap children in `<AuthGate>`.
-- `src/routes/index.tsx` — show username + logout button in header.
-- `src/components/AdminEditor.tsx` — add Team & Usage tab.
-- `src/routes/api/generate-email.ts` / `generate-sms.ts` — accept `username` in body, log generation.
-- `src/components/EmailGenerator.tsx` / `SmsGenerator.tsx` — send `username` from session in the request body.
+3. No DB / no API key changes.
 
-## Notes / tradeoffs
+## Out of scope
 
-- Plaintext passwords are intentional per the request. If you ever want to harden this, we can switch to hashed passwords and remove the "view password" feature.
-- This is shared-secret login — no real Supabase Auth users. Simple and matches the goal of just attributing usage to a person.
+- No changes to email generation.
+- No new variant slots — keep the existing 6-variant shape so output rendering stays untouched.
