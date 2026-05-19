@@ -295,6 +295,9 @@ export const Route = createFileRoute("/api/generate-sms")({
           if (body.smsType === "signup_promo" && !body.promoCode?.trim()) {
             return Response.json({ error: "Promo code is required." }, { status: 400 });
           }
+          if (body.smsType === "non_spam" && !body.promoCode?.trim()) {
+            return Response.json({ error: "Promo code is required." }, { status: 400 });
+          }
           if (body.smsType === "deposit_bonus") {
             if (!body.depositOrdinal) {
               return Response.json({ error: "Deposit ordinal is required." }, { status: 400 });
