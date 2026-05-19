@@ -5,6 +5,17 @@ import {
   SMS_SAFE_REPLACEMENTS,
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
+import {
+  makeStandardCasualSeed,
+  makeNoSpamSeed,
+  renderStandardCasualSeedBlock,
+  renderNoSpamSeedBlock,
+  renderRecentTextsBlock,
+  fetchRecentTexts,
+  saveRecentTexts,
+  type StandardCasualSeed,
+  type NoSpamSeed,
+} from "@/server/sms-variation.server";
 
 type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
@@ -37,9 +48,16 @@ type SmsBody = {
   freePlayReward?: string;
   extraForbidden?: string;
   activeCategories: SmsSpamCategoryId[];
+  siteId?: string;
 };
 
-function buildPrompt(input: SmsBody) {
+type PromptExtras = {
+  seedBlock?: string;
+  recentBlock?: string;
+};
+
+function buildPrompt(input: SmsBody, extras: PromptExtras = {}) {
+
   const forbiddenSet = new Set<string>();
   for (const cat of SMS_SPAM_CATEGORIES) {
     if (input.activeCategories.includes(cat.id)) {
