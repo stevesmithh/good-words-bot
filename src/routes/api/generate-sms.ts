@@ -198,6 +198,10 @@ VARIANTS — return THREE messages, each with a different opening structure so c
 - "nospamB": "Your profile currently qualifies for an adjusted credit allocation..."
 - "nospamC": "An adjusted balance update has been applied to your account..."
 
+${extras.seedBlock ?? ""}
+
+${extras.recentBlock ?? ""}
+
 Return your answer using the provided tool.`;
   }
 
@@ -211,6 +215,12 @@ Offer details: ${input.offerDetails}
 ${typeRules}
 
 LENGTH: ${lengthRule}
+
+${extras.seedBlock ?? ""}
+
+${extras.recentBlock ?? ""}
+
+
 
 VOICE — DAILY US TEXT MESSAGE:
 - Write the way Americans actually text each other. Loose, casual, conversational.
