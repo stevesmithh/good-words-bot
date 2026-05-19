@@ -44,7 +44,7 @@ type Promotion = {
 };
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
 
@@ -69,6 +69,7 @@ const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
   { id: "deposit_coupon", label: "Deposit coupon", desc: "Code for deposit bonus" },
   { id: "deposit_bonus", label: "Deposit bonus", desc: "1st / 2nd / 3rd" },
   { id: "signup_promo", label: "Signup promo", desc: "Code for signup" },
+  { id: "non_spam", label: "Non-Spam", desc: "Transactional, carrier-safe" },
 ];
 
 function segmentInfo(text: string) {
@@ -159,6 +160,7 @@ export function SmsGenerator() {
     if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
     if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
     if (smsType === "deposit_bonus" && !bonusAmount.trim()) e.bonus = "Required.";
+    if (smsType === "non_spam" && !promoCode.trim()) e.promo = "Required.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -203,7 +205,7 @@ export function SmsGenerator() {
         smsType,
         offerDetails,
         audience,
-        brandName: brandName.trim() || undefined,
+        brandName: smsType === "non_spam" ? undefined : (brandName.trim() || undefined),
         ctaLink: link.shortUrl,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
@@ -221,6 +223,10 @@ export function SmsGenerator() {
       if (smsType === "signup_promo") {
         payload.promoCode = promoCode.trim();
         payload.freePlayReward = freePlayReward.trim() || undefined;
+      }
+      if (smsType === "non_spam") {
+        payload.promoCode = promoCode.trim();
+        payload.bonusDescription = bonusAmount.trim() || undefined;
       }
 
       const resp = await fetch("/api/generate-sms", {
@@ -501,6 +507,41 @@ export function SmsGenerator() {
                   onChange={(e) => setFreePlayReward(e.target.value)}
                   placeholder="$10 free play"
                 />
+              </div>
+            </div>
+          )}
+
+          {smsType === "non_spam" && (
+            <div className="space-y-3">
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Transactional account-notification style. Reads like a system message — no brand, no promo language, neutral vocabulary only. Designed to maximize US carrier deliverability.
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nsPromo">
+                    Promo code <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="nsPromo"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="MEGAGEM40"
+                    aria-invalid={!!errors.promo}
+                  />
+                  {errors.promo && <p className="text-xs text-destructive">{errors.promo}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nsRef">Value reference (optional)</Label>
+                  <Input
+                    id="nsRef"
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(e.target.value)}
+                    placeholder="40"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mentioned only as a neutral reference (e.g. "tier 40 credit"). No %, $, or "bonus".
+                  </p>
+                </div>
               </div>
             </div>
           )}

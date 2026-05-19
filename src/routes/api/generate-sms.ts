@@ -7,7 +7,7 @@ import {
 } from "@/lib/sms-spam-words";
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
 type LengthTarget = "short" | "standard";
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
@@ -100,12 +100,80 @@ ${input.couponCode ? `- Include the coupon value verbatim: ${input.couponCode}. 
 - NEVER write the word "code" before or after it. Do NOT write "promo code ${input.promoCode}" or "use code ${input.promoCode}".
 - Reward on signup: ${input.freePlayReward || "free play"}`;
       break;
+    case "non_spam":
+      typeRules = `SMS type: NON-SPAM transactional account notification.
+- MUST include the promo value verbatim: ${input.promoCode}
+- Reference it neutrally, e.g. "apply ${input.promoCode}", "use ${input.promoCode}", "reference: ${input.promoCode}", "${input.promoCode}".
+- NEVER write the word "code" before or after it.
+${input.bonusDescription ? `- If a value is mentioned, encode it as a neutral reference like "tier ${input.bonusDescription} credit" or "level ${input.bonusDescription} allocation". NEVER use "%", "$", "bonus", "free", "freeplay".` : "- Do NOT mention any bonus, percentage, dollar amount, or freeplay value."}`;
+      break;
   }
+
 
   const lengthRule =
     input.lengthTarget === "short"
       ? "Message text MUST be under 160 characters TOTAL including the link. Aim for 10-15 words."
       : "Message text should be 10-15 words plus the link at the end. Total ideally under 200 characters.";
+
+  if (input.smsType === "non_spam") {
+    const linkBlock = input.ctaLink && input.ctaLink.trim()
+      ? `LINK HANDLING:
+- The link is: ${input.ctaLink}
+- Place the link at the very end of each message.
+- Separate it from the preceding text with either " " (single space), ": " (colon-space), or " - " (space-dash-space) — vary across variants.
+- Do NOT rewrite, shorten, or modify the link.
+- Do NOT use words like "click here", "tap here", "click link".`
+      : `NO LINK:
+- Do NOT include any URL in any variant.
+- End each message with a neutral closing word like "available", "applied", or "active".`;
+
+    return `You are writing US-bound bulk SMS that MUST pass mobile carrier spam filters (AT&T, Verizon, T-Mobile). These messages must read like an automatic TRANSACTIONAL ACCOUNT NOTIFICATION — the kind of system message a user receives from their bank, utility, or account dashboard. They are NOT promotional and must not look promotional.
+
+Audience: ${AUDIENCE_LABEL[input.audience]}
+Offer context (for your reference only — DO NOT use marketing words from it): ${input.offerDetails}
+
+${typeRules}
+
+LENGTH: Each message under 200 characters TOTAL including the link.
+
+TRANSACTIONAL VOICE — STRICT:
+- Tone: neutral, factual, third-person account-system notification.
+- Style references (mirror this register):
+  · "A balance enhancement is currently available on your account. Apply ${input.promoCode || "REF40"} to continue: link"
+  · "Your account is eligible for an additional balance credit today. Use ${input.promoCode || "REF40"} during checkout. Access: link"
+  · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${input.promoCode || "REF40"} - link"
+- Allowed vocabulary: balance, account, credit, allocation, adjustment, enhancement, tier, level, reference, profile, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
+- Capitalization: Standard sentence case. The promo code stays in its original case (uppercase OK because it's a reference, not shouting).
+- Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than the promo code itself).
+- No brand name. No greeting ("Hi", "Hey"). No sign-off.
+
+${linkBlock}
+
+FORBIDDEN WORDS (must not appear anywhere — these scream "promo" to carriers):
+bonus, free, freeplay, deposit, win, winner, cash, prize, reward, gift, offer, promo, promotion, promotional, discount, sale, deal, exclusive, limited, special, hurry, last chance, expires, claim, unlock, congratulations, congrats, you won, you've won, eligible to win, lucky, jackpot, spin, play, casino, betting, wager, "$", "%", "100%", "FREE", "WIN".
+Also forbidden: ${forbiddenList}
+
+SAFE REPLACEMENTS:
+${replacementLines}
+
+HARD RULES:
+- NEVER use the literal English word "code" (or "promo code", "use code"). Reference the value directly: "apply ${input.promoCode || "REF40"}", "use ${input.promoCode || "REF40"}", "reference: ${input.promoCode || "REF40"}".
+- The promo value ${input.promoCode ? `"${input.promoCode}"` : ""} MUST appear verbatim in every variant.
+- No marketing language. No urgency. No superlatives. No emoji.
+- Each variant must sound like a system-generated account notice.
+
+VARIANTS — return SIX messages, all transactional account-notification style. Each MUST start with a different opening structure so carriers don't dedupe:
+- "message": "A balance enhancement is currently available on your account..."
+- "standardA": "Your account is eligible for an additional balance credit..."
+- "standardB": "Your profile currently qualifies for an adjusted credit allocation..."
+- "casualA": "An adjusted credit allocation has been applied to your account..."
+- "casualB": "A pending balance update is available for your review..."
+- "casualC": "Your account currently has an active credit reference..."
+
+Treat all six as TRANSACTIONAL — do NOT use any casual / slang voice for casualA/B/C. The field names are kept for compatibility only.
+
+Return your answer using the provided tool.`;
+  }
 
   return `You are writing bulk SMS for a US audience. The goal: messages that read like a real person texting a friend in everyday American English — casual, intriguing, and human — while passing US carrier spam filters (AT&T, Verizon, T-Mobile).
 
@@ -225,6 +293,9 @@ export const Route = createFileRoute("/api/generate-sms")({
             return Response.json({ error: "Coupon code is required." }, { status: 400 });
           }
           if (body.smsType === "signup_promo" && !body.promoCode?.trim()) {
+            return Response.json({ error: "Promo code is required." }, { status: 400 });
+          }
+          if (body.smsType === "non_spam" && !body.promoCode?.trim()) {
             return Response.json({ error: "Promo code is required." }, { status: 400 });
           }
           if (body.smsType === "deposit_bonus") {
