@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
 import { AdminButton } from "@/components/AdminEditor";
+import { Button } from "@/components/ui/button";
+import { clearSession, getSession } from "@/lib/session";
 
 type Tab = "email" | "sms";
 
@@ -24,6 +26,12 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [tab, setTab] = useState<Tab>("email");
+  const session = getSession();
+
+  const handleLogout = () => {
+    clearSession();
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -38,9 +46,20 @@ function Index() {
               Inbox-safe emails and carrier-friendly bulk SMS.
             </p>
           </div>
+          {session && (
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              Signed in as <strong className="font-medium text-foreground">{session.username}</strong>
+              {session.isAdmin && " (admin)"}
+            </span>
+          )}
           <AdminButton />
+          <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2" title="Sign out">
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
       </header>
+
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Tab switcher */}

@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      generation_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          username?: string
+        }
+        Relationships: []
+      }
       promotions: {
         Row: {
           created_at: string
@@ -136,6 +157,33 @@ export type Database = {
           short_url?: string
           shortio_id?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          password: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          password: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          password?: string
+          updated_at?: string
+          username?: string
         }
         Relationships: []
       }

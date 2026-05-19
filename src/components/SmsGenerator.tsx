@@ -31,6 +31,7 @@ import {
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
 import { useCatalog } from "@/lib/catalog";
+import { logGeneration } from "@/lib/usage";
 
 type SiteId = string;
 type SmsProvider = string;
@@ -240,6 +241,7 @@ export function SmsGenerator() {
 
       setResult(data as SmsResult);
       toast.success(link.isReused ? "SMS generated (reused link)" : "SMS generated (new link)");
+      void logGeneration("sms");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(message);
