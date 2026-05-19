@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2, Settings, Lock } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Settings, Lock, Users, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCatalog, type Site, type Promotion, type Provider } from "@/lib/catalog";
+import { getSession } from "@/lib/session";
 
 const SESSION_KEY = "admin_code";
 
@@ -149,10 +151,20 @@ function EditorDialog({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <Tabs defaultValue="sites" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${getSession()?.isAdmin ? "grid-cols-5" : "grid-cols-3"}`}>
               <TabsTrigger value="sites">Sites ({data.sites.length})</TabsTrigger>
               <TabsTrigger value="promotions">Promotions ({data.promotions.length})</TabsTrigger>
               <TabsTrigger value="providers">SMS Providers ({data.providers.length})</TabsTrigger>
+              {getSession()?.isAdmin && (
+                <>
+                  <TabsTrigger value="usage" className="gap-1.5">
+                    <BarChart3 className="h-3.5 w-3.5" /> Usage
+                  </TabsTrigger>
+                  <TabsTrigger value="team" className="gap-1.5">
+                    <Users className="h-3.5 w-3.5" /> Team
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
             <TabsContent value="sites" className="flex-1 min-h-0">
               <SitesEditor sites={data.sites} />
@@ -163,6 +175,16 @@ function EditorDialog({ onClose }: { onClose: () => void }) {
             <TabsContent value="providers" className="flex-1 min-h-0">
               <ProvidersEditor providers={data.providers} />
             </TabsContent>
+            {getSession()?.isAdmin && (
+              <>
+                <TabsContent value="usage" className="flex-1 min-h-0">
+                  <UsagePanel />
+                </TabsContent>
+                <TabsContent value="team" className="flex-1 min-h-0">
+                  <TeamPanel />
+                </TabsContent>
+              </>
+            )}
           </Tabs>
         )}
       </DialogContent>
