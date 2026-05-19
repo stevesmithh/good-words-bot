@@ -76,6 +76,33 @@ export type Database = {
           },
         ]
       }
+      recent_sms_outputs: {
+        Row: {
+          created_at: string
+          id: string
+          site_id: string | null
+          sms_type: string
+          text: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          site_id?: string | null
+          sms_type: string
+          text: string
+          variant: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          site_id?: string | null
+          sms_type?: string
+          text?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       sites: {
         Row: {
           created_at: string
