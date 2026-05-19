@@ -52,7 +52,7 @@ function Index() {
               {session.isAdmin && " (admin)"}
             </span>
           )}
-          <AdminButton />
+          {session?.isAdmin && <AdminButton />}
           <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2" title="Sign out">
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>
