@@ -205,7 +205,7 @@ export function SmsGenerator() {
         smsType,
         offerDetails,
         audience,
-        brandName: brandName.trim() || undefined,
+        brandName: smsType === "non_spam" ? undefined : (brandName.trim() || undefined),
         ctaLink: link.shortUrl,
         lengthTarget,
         extraForbidden: extraForbidden.trim() || undefined,
