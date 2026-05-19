@@ -320,4 +320,45 @@ export async function saveRecentTexts(
   const rows = texts
     .filter((t) => typeof t === "string" && t.trim().length > 0)
     .map((t) => ({
-      site_
+      site_id: siteId,
+      sms_type: smsType,
+      variant: variantGroup,
+      text: t.trim(),
+    }));
+  if (rows.length === 0) return;
+  try {
+    await supabaseAdmin.from("recent_sms_outputs").insert(rows);
+    // Lazy cleanup: keep only the most recent 50 rows per (site,type,variant).
+    const { data: keepers } = await supabaseAdmin
+      .from("recent_sms_outputs")
+      .select("id")
+      .eq("sms_type", smsType)
+      .eq("variant", variantGroup)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (keepers && keepers.length === 50) {
+      const keepIds = keepers.map((k) => k.id);
+      let del = supabaseAdmin
+        .from("recent_sms_outputs")
+        .delete()
+        .eq("sms_type", smsType)
+        .eq("variant", variantGroup)
+        .not("id", "in", `(${keepIds.map((id) => `"${id}"`).join(",")})`);
+      if (siteId) {
+        del = del.eq("site_id", siteId);
+      } else {
+        del = del.is("site_id", null);
+      }
+      await del;
+    }
+  } catch {
+    // best-effort; never block the response
+  }
+}
+
+export function renderRecentTextsBlock(label: string, texts: string[]): string {
+  if (texts.length === 0) return "";
+  const numbered = texts.map((t, i) => `  ${i + 1}. ${t}`).join("\n");
+  return `RECENT ${label} SENDS — DO NOT mirror these openers, phrasings, sentence shapes, emoji choices, or word picks. Make every new variant feel distinctly different from these:
+${numbered}`;
+}
