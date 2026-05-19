@@ -288,15 +288,20 @@ export function SmsGenerator() {
 
   const allVariants = useMemo(() => {
     if (!result) return "";
-    return [
+    const parts = [
       `Standard — Primary:\n${result.message}`,
       `Standard A:\n${result.standardA}`,
       `Standard B:\n${result.standardB}`,
       `Casual A:\n${result.casualA}`,
       `Casual B:\n${result.casualB}`,
       `Casual C:\n${result.casualC}`,
-    ].join("\n\n");
+    ];
+    if (result.nospamA) parts.push(`No-Spam A:\n${result.nospamA}`);
+    if (result.nospamB) parts.push(`No-Spam B:\n${result.nospamB}`);
+    if (result.nospamC) parts.push(`No-Spam C:\n${result.nospamC}`);
+    return parts.join("\n\n");
   }, [result]);
+
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
