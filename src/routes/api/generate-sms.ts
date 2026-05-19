@@ -7,7 +7,7 @@ import {
 } from "@/lib/sms-spam-words";
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
 type LengthTarget = "short" | "standard";
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
