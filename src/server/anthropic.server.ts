@@ -58,7 +58,7 @@ export async function callClaudeWithTool(
       return {
         ok: false,
         status: 402,
-        error: "AI credits finished. Please top up your Lovable workspace.",
+        error: "AI credits finished. Please top up your workspace.",
       };
     }
     if (resp.status === 401 || resp.status === 403) {
