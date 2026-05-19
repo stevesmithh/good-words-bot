@@ -1,68 +1,65 @@
-# Add "Non-Spam" SMS type (transactional-style copy)
+# Make every SMS generation feel unique
 
-Add a new SMS type that produces messages reading like a transactional account notification rather than a promo. Goal: maximize pass-through on US carrier spam filters (AT&T, Verizon, T-Mobile).
+## Problem
+The team generates SMS daily with the same site / promotion / SMS type. Right now each run starts from the same prompt with no randomness and no awareness of what was sent before, so outputs cluster around the same openers, sentence shapes, and emoji choices. Over a week it reads like the same handful of messages on repeat.
 
-## What the user picks
+## Goal
+Each generation — even with identical inputs — should feel meaningfully different from the previous runs of the same team, while still following all spam-safe and length rules.
 
-In the existing SMS Type selector (alongside Promotional / Deposit coupon / Deposit bonus / Signup promo) add:
+## Approach
+Three layers of variation, stacked:
 
-- **Non-Spam** — Transactional-style account message, max carrier-safe
+### 1. Model-level randomness
+- Raise the model's creativity dial (`temperature` ~1.0, `top_p` ~0.95) on the AI gateway call. Right now no temperature is passed, so the model behaves near-deterministic.
 
-When selected, the form keeps the same fields but:
-- Brand name field is hidden (brand is intentionally not mentioned)
-- Promo code field is shown (and required) — the code is the only "marketing" element kept
-- Bonus % / freeplay field is shown but optional, and used as a *neutral reference* only (e.g. "tier 40 credit") — never with `$`, `%`, "bonus", "free"
+### 2. Per-request creative seed
+For every generation, the server randomly picks fresh "creative ingredients" and bakes them into the prompt:
+- A different shuffled opener pool for each of the 6 (Standard + Casual) variants, drawn from a much larger master pool.
+- A rotated "sentence shape" hint per variant (e.g. "start with a question", "two short fragments", "single statement", "imperative line", "two-clause sentence with em-dash").
+- A rotated micro-tone modifier (e.g. "playful", "matter-of-fact", "warm", "low-key", "curious", "direct").
+- A rotated emoji policy (none / single optional / one specific allowed emoji from a rotating set).
+- A small random "vibe word" that flavors the message without being mandatory.
 
-## Content rules for Non-Spam
+Because the seed differs every call, the prompt itself differs every call, which materially changes output even at the same temperature.
 
-Every variant must read like a balance/account notification. Style references:
+### 3. Memory of recent outputs (anti-repetition)
+Persist the texts of the last ~30 generations per `(site_id, sms_type)` and feed the most recent 15 back into the prompt as a "RECENT SENDS — do NOT mirror these openers, phrasings, sentence shapes, or emoji" block. The model is explicitly told these are off-limits as templates.
 
-- "A balance enhancement is currently available on your account. Apply MEGAGEM40 to continue: link"
-- "Your account is eligible for an additional balance credit today. Use MEGAGEM40 during checkout. Access: link"
-- "Your profile currently qualifies for an adjusted credit allocation. Reference: MEGAGEM40 - link"
+This is the single biggest win: it directly addresses "the texts are very similar each day", because the model literally sees yesterday's outputs and is told to diverge.
 
-Hard constraints layered on top of existing forbidden-word logic:
+Also applies to the No-Spam group on its own track (its own recent-sends memory).
 
-- Tone: account/system notification. Neutral, factual, third-person. No casual/slang variants.
-- No brand name. No emoji. No exclamation marks. No urgency.
-- Forbid (in addition to existing list): `bonus`, `free`, `freeplay`, `deposit`, `win`, `winner`, `cash`, `prize`, `reward`, `gift`, `offer`, `promo`, `promotion`, `discount`, `exclusive`, `limited`, `claim`, `unlock`, `congratulations`, `eligible to win`, `$`, `%`, ALL CAPS words (other than the promo code itself).
-- Allowed neutral vocabulary: "balance", "account", "credit", "allocation", "adjustment", "enhancement", "tier", "reference", "profile", "qualifies", "eligible", "available", "apply", "use", "access", "continue".
-- Promo code MUST appear verbatim, referenced naturally ("apply MEGAGEM40", "use MEGAGEM40", "reference: MEGAGEM40"). The word "code" is already globally forbidden — that stays.
-- If bonus value is provided, encode it as a neutral reference like "tier 40 credit" / "level 40 allocation" — never "40% bonus" or "$40 free".
-- Link sits at the end after a single space or `:` / `-` separator (the example uses both — allow either).
-- Length: under 200 chars total including link.
+## Technical details
 
-## Variants returned
+### Database
+New table `recent_sms_outputs`:
+- `id uuid pk`
+- `site_id text` (nullable — falls back to global)
+- `sms_type text` (`promotional` | `deposit_coupon` | `deposit_bonus` | `signup_promo` | `non_spam`)
+- `variant text` (`standard` | `casual` | `nospam`)
+- `text text`
+- `created_at timestamptz default now()`
+- Indexes on `(site_id, sms_type, created_at desc)` and a TTL-style cleanup keeping only the last 50 rows per group (done lazily on insert).
+- RLS: no public access (server-only via service-role client, same pattern as `generation_events`).
 
-For Non-Spam, return SIX variants in the same shape as today, but all six use the transactional account-notification style — no casual variants. Each variant uses a different opening structure so carriers don't dedupe:
+### Server changes (`src/routes/api/generate-sms.ts`)
+- Add `seedCreative(input)` helper that returns: per-variant opener pool, sentence shape, tone, emoji policy, vibe word — all chosen by `Math.random()` from large master lists.
+- Add `fetchRecentTexts(site_id, sms_type, variantGroup, limit=15)` using the service-role client.
+- Add `saveRecentTexts(site_id, sms_type, variantGroup, texts[])` after a successful generation (fire-and-forget, do not block response).
+- Modify `buildPrompt` to:
+  - Accept the creative seed and inject a "VARIATION SEED" block listing each variant's chosen opener pool, shape, tone, emoji policy.
+  - Inject a "RECENT SENDS — avoid mirroring" block with the fetched recent texts.
+- Update `callClaudeWithTool` (or pass options through) to send `temperature: 1.0` and `top_p: 0.95`.
+- Same memory + seed mechanism wired for the parallel No-Spam call, scoped to `variant=nospam`.
 
-- `message` — "A balance enhancement is currently available on your account..."
-- `standardA` — "Your account is eligible for..."
-- `standardB` — "Your profile currently qualifies for..."
-- `casualA` — "An adjusted credit allocation has been applied to your account..."
-- `casualB` — "A pending balance update is available for your review..."
-- `casualC` — "Your account currently has an active credit reference..."
+### Master pools (server-only constants)
+- ~30 standard openers, ~40 casual openers (curiosity / friend-rec / fyi each get their own larger pool), ~12 No-Spam opening structures.
+- ~8 sentence shapes, ~8 tone modifiers, ~6 emoji policies, ~25 vibe words.
 
-(Field names stay the same so the existing UI rendering keeps working — only the content style changes for this type.)
-
-## Technical changes
-
-1. `src/routes/api/generate-sms.ts`
-   - Extend `SmsType` union with `"non_spam"`.
-   - Add a `case "non_spam"` branch in `buildPrompt` with the transactional rules above and the extended forbidden list.
-   - Skip the casual VOICE / DIVERSITY blocks for `non_spam`; replace with a TRANSACTIONAL VOICE block.
-   - Validation: require `promoCode` for `non_spam`.
-
-2. `src/components/SmsGenerator.tsx`
-   - Add `"non_spam"` to `SmsType` and to `SMS_TYPES` with label "Non-Spam" and desc "Transactional, carrier-safe".
-   - Show the promo code input when `smsType === "non_spam"` (reuse existing `promoCode` field & error key).
-   - Optional: show a small helper note under the type tile when selected.
-   - Hide the brand name field when `non_spam` is selected (or just don't send it).
-   - In the submit payload, send `smsType: "non_spam"` and the promo code.
-
-3. No DB / no API key changes.
+### No UI changes
+This is entirely server-side. The form stays as-is and the output area stays as-is — the messages it shows just stop repeating themselves.
 
 ## Out of scope
-
-- No changes to email generation.
-- No new variant slots — keep the existing 6-variant shape so output rendering stays untouched.
+- No change to the SMS type picker, the No-Spam rendering, the short-link flow, or the length / spam-category controls.
+- No global "regenerate with more variation" button — variation becomes the default.
+- No per-user memory (anti-repetition is per site + sms_type, shared across the team, which matches how they actually send).
