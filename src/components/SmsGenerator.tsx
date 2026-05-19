@@ -749,7 +749,47 @@ export function SmsGenerator() {
               shortLink={shortLink}
               onCopy={() => copy(result.casualC, "Casual C")}
               onMarkUsed={handleMarkUsed}
-            />
+
+
+            {(result.nospamA || result.nospamB || result.nospamC) && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    No-Spam
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.nospamA && (
+                  <SmsCard
+                    title="No-Spam A"
+                    value={result.nospamA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamA!, "No-Spam A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.nospamB && (
+                  <SmsCard
+                    title="No-Spam B"
+                    value={result.nospamB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamB!, "No-Spam B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.nospamC && (
+                  <SmsCard
+                    title="No-Spam C"
+                    value={result.nospamC}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.nospamC!, "No-Spam C")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
+
+
 
             <Button
               variant="secondary"
