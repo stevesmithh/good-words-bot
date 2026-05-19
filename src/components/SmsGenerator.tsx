@@ -160,6 +160,7 @@ export function SmsGenerator() {
     if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
     if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
     if (smsType === "deposit_bonus" && !bonusAmount.trim()) e.bonus = "Required.";
+    if (smsType === "non_spam" && !promoCode.trim()) e.promo = "Required.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
