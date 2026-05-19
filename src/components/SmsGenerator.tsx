@@ -224,6 +224,10 @@ export function SmsGenerator() {
         payload.promoCode = promoCode.trim();
         payload.freePlayReward = freePlayReward.trim() || undefined;
       }
+      if (smsType === "non_spam") {
+        payload.promoCode = promoCode.trim();
+        payload.bonusDescription = bonusAmount.trim() || undefined;
+      }
 
       const resp = await fetch("/api/generate-sms", {
         method: "POST",
