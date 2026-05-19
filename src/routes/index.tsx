@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
 import { AdminButton } from "@/components/AdminEditor";
+import { Button } from "@/components/ui/button";
+import { clearSession, getSession } from "@/lib/session";
 
 type Tab = "email" | "sms";
 
