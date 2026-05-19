@@ -314,6 +314,7 @@ export const Route = createFileRoute("/api/generate-sms")({
           }
 
           const prompt = buildPrompt(body);
+          const nospamPrompt = buildPrompt({ ...body, smsType: "non_spam" });
 
           const SMS_TOOL = {
             type: "function" as const,
@@ -360,7 +361,28 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
-          const result = await callClaudeWithTool(prompt, SMS_TOOL);
+          const NOSPAM_TOOL = {
+            type: "function" as const,
+            function: {
+              name: "return_nospam",
+              description: "Return three account-notification style SMS variants.",
+              parameters: {
+                type: "object",
+                properties: {
+                  nospamA: { type: "string", description: "Account-notification variant A. Starts with 'A balance enhancement...'. Never uses the word 'code'." },
+                  nospamB: { type: "string", description: "Account-notification variant B. Starts with 'Your profile currently qualifies...'. Never uses the word 'code'." },
+                  nospamC: { type: "string", description: "Account-notification variant C. Starts with 'An adjusted balance update...'. Never uses the word 'code'." },
+                },
+                required: ["nospamA", "nospamB", "nospamC"],
+                additionalProperties: false,
+              },
+            },
+          };
+
+          const [result, nospamResult] = await Promise.all([
+            callClaudeWithTool(prompt, SMS_TOOL),
+            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL),
+          ]);
           if (!result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
@@ -368,7 +390,14 @@ export const Route = createFileRoute("/api/generate-sms")({
             );
           }
 
-          return Response.json(result.args);
+          const merged = {
+            ...result.args,
+            ...(nospamResult.ok
+              ? nospamResult.args
+              : { nospamA: "", nospamB: "", nospamC: "" }),
+          };
+          return Response.json(merged);
+
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
           return Response.json({ error: message }, { status: 500 });
