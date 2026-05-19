@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiShortioRouteImport } from './routes/api/shortio'
 import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
 import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
+import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
   path: '/api/generate-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthRoute = ApiAuthRouteImport.update({
+  id: '/api/auth',
+  path: '/api/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminRoute = ApiAdminRouteImport.update({
   id: '/api/admin',
   path: '/api/admin',
@@ -44,6 +50,7 @@ const ApiAdminRoute = ApiAdminRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/shortio': typeof ApiShortioRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/shortio': typeof ApiShortioRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/admin': typeof ApiAdminRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/shortio': typeof ApiShortioRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/admin'
+    | '/api/auth'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/shortio'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/api/admin'
+    | '/api/auth'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/shortio'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/api/admin'
+    | '/api/auth'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/shortio'
@@ -90,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAdminRoute: typeof ApiAdminRoute
+  ApiAuthRoute: typeof ApiAuthRoute
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
   ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
   ApiShortioRoute: typeof ApiShortioRoute
@@ -125,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth': {
+      id: '/api/auth'
+      path: '/api/auth'
+      fullPath: '/api/auth'
+      preLoaderRoute: typeof ApiAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin': {
       id: '/api/admin'
       path: '/api/admin'
@@ -138,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAdminRoute: ApiAdminRoute,
+  ApiAuthRoute: ApiAuthRoute,
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,
   ApiGenerateSmsRoute: ApiGenerateSmsRoute,
   ApiShortioRoute: ApiShortioRoute,
@@ -145,3 +166,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
