@@ -21,6 +21,7 @@ const MODEL = "google/gemini-2.5-pro";
 export async function callClaudeWithTool(
   prompt: string,
   tool: OpenAITool,
+  options?: { temperature?: number; top_p?: number },
 ): Promise<AnthropicResult> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
@@ -42,8 +43,11 @@ export async function callClaudeWithTool(
       messages: [{ role: "user", content: prompt }],
       tools: [tool],
       tool_choice: { type: "function", function: { name: tool.function.name } },
+      ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+      ...(options?.top_p !== undefined ? { top_p: options.top_p } : {}),
     }),
   });
+
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => "");
