@@ -44,7 +44,7 @@ type Promotion = {
 };
 
 type Audience = "new" | "active" | "inactive";
-type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
+type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
 
@@ -55,6 +55,9 @@ type SmsResult = {
   casualA: string;
   casualB: string;
   casualC: string;
+  nospamA?: string;
+  nospamB?: string;
+  nospamC?: string;
 };
 
 type ShortLinkInfo = {
@@ -69,8 +72,8 @@ const SMS_TYPES: { id: SmsType; label: string; desc: string }[] = [
   { id: "deposit_coupon", label: "Deposit coupon", desc: "Code for deposit bonus" },
   { id: "deposit_bonus", label: "Deposit bonus", desc: "1st / 2nd / 3rd" },
   { id: "signup_promo", label: "Signup promo", desc: "Code for signup" },
-  { id: "non_spam", label: "Non-Spam", desc: "Transactional, carrier-safe" },
 ];
+
 
 function segmentInfo(text: string) {
   const len = text.length;
