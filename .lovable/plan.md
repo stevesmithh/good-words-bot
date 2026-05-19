@@ -1,149 +1,74 @@
-## Add "Friendly" inbox type (3rd selector)
+# Login + Credits Usage Tracking
 
-Add a third inbox option called **Friendly** alongside Promotional and Primary. It uses the exact prompt you sent, stored verbatim and kept fully separate from the other two prompts.
+Add a simple shared-password login gate to the app and track every generation per user. Add an admin dashboard (steve) to review usage and manage team credentials.
 
-### 1. Backend — `src/routes/api/generate-email.ts`
+## How it will work
 
-- Extend `InboxType` to `"promotional" | "primary" | "friendly"`.
-- Add a new constant `FRIENDLY_INBOX_PROMPT_TEMPLATE` containing your prompt **exactly as you wrote it**, ending with the placeholder `[USER'S OFFER DETAILS GO HERE]` where the offer gets injected.
+- A login screen blocks access to the entire app. Each team member signs in with their personal username + password.
+- After login, the app works exactly as today, but every Email/SMS generation is recorded against that user (username + timestamp + type).
+- Steve gets an extra "Team usage" tab in the existing Admin Editor where he can:
+  - See total generations per user with date filters: Today, Yesterday, Last 7 days, Custom range.
+  - See a list of all team members with their current login + password.
+  - Add / edit / delete team members (change username, change password, mark as admin).
+- Logout button shown in the header next to the current user's name.
 
-The exact text that will be stored (verbatim, untouched):
+## Initial team members (seeded)
 
-```
-You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
+| Username | Password         | Role  |
+|----------|------------------|-------|
+| alice    | alice0125@       | user  |
+| natalie  | natalie8771@     | user  |
+| romeo    | romeo98771@      | user  |
+| leo      | leo18882@        | user  |
+| steve    | steve01001@      | admin |
+| chris    | chris6001@       | user  |
 
-Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
+Steve can change any of these from the admin panel later.
 
-### STRICT PHILOSOPHY (Never Break These Rules)
+## Technical details
 
-- Primary inbox is the highest priority.
+### Database (new tables)
 
-- Sound like a helpful system/account message (like from a bank or useful app).
+- `team_members` — `id uuid pk`, `username text unique`, `password text`, `is_admin bool`, `created_at`, `updated_at`. RLS: no public access (only reached via server functions).
+- `generation_events` — `id uuid pk`, `username text`, `kind text ('email'|'sms')`, `created_at timestamptz default now()`. RLS: no public access.
+- Seed the 6 users via a one-time `INSERT` in the migration.
 
-- Never sound like marketing or sales.
+Passwords are stored in plaintext because the user wants to view/edit them in the admin panel. This is an internal team tool, not a public auth system — we'll note the tradeoff but follow the requested design.
 
-- Clarity is more important than persuasion.
+### Auth gate (client + server)
 
-### FORBIDDEN WORDS & PHRASES (Completely Avoid)
+- Reuse the existing `/api/admin` pattern. New server route `/api/auth` with actions:
+  - `login` → verify username+password against `team_members`, return `{ username, isAdmin }` on success.
+  - `listMembers` / `upsertMember` / `deleteMember` → admin-only (verified via `adminCode` OR via posting the admin's own username+password again on each call).
+  - `usage` → admin-only, returns counts grouped by username, filtered by date range.
+- Session: store `{ username, isAdmin }` in `localStorage` after successful login. A new `<AuthGate>` wrapper in `src/routes/__root.tsx` (or in `src/routes/index.tsx`) renders a login form when no session is present.
+- Logout: clears localStorage and reloads.
 
-bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
+### Logging generations
 
-### NEW IMPORTANT RULE - EXTREME SIMPLICITY
+- Add a tiny helper `logGeneration(username, kind)` called from `src/routes/api/generate-email.ts` and `src/routes/api/generate-sms.ts` right after a successful generation. Username is passed in the request body from the client (read from localStorage).
+- Server inserts a row into `generation_events` using the admin Supabase client.
 
-- Use very simple, everyday words.
+### Admin dashboard
 
-- Write like you are explaining to a 15-year-old student.
+- Extend `src/components/AdminEditor.tsx` with a new "Team & Usage" tab visible only when `isAdmin === true`.
+- Two sub-sections:
+  1. **Usage**: date filter (Today / Yesterday / 7d / Custom) → table of `username | email count | sms count | total`.
+  2. **Members**: editable table of `username | password | admin?` with add/delete/save buttons.
 
-- Use short sentences (maximum 15-20 words per sentence).
+### Files to add / change
 
-- Use short paragraphs (2-3 lines max).
+- `supabase` migration: create the two tables, RLS policies, seed rows.
+- `src/routes/api/auth.ts` — new server route.
+- `src/lib/session.ts` — small client helper for getting/setting current user in localStorage.
+- `src/components/AuthGate.tsx` — login screen + wrapper.
+- `src/routes/__root.tsx` — wrap children in `<AuthGate>`.
+- `src/routes/index.tsx` — show username + logout button in header.
+- `src/components/AdminEditor.tsx` — add Team & Usage tab.
+- `src/routes/api/generate-email.ts` / `generate-sms.ts` — accept `username` in body, log generation.
+- `src/components/EmailGenerator.tsx` / `SmsGenerator.tsx` — send `username` from session in the request body.
 
-- Make the email extremely easy to read and understand in under 10 seconds.
+## Notes / tradeoffs
 
-- Avoid complex words. Use simple alternatives.
-
-- Make the message crystal clear so anyone can understand it immediately.
-
-### ALWAYS FOLLOW THIS EXACT STRUCTURE
-
-1. **Subject Line**
-
-   - Maximum 6-8 words
-
-   - Clear and action-oriented
-
-   - Sounds like an account update
-
-2. **Preheader** (1 short helpful sentence)
-
-3. **Email Body Structure**
-
-   - Personal greeting: "Hi {{ insert first_name 'default=default' }},"
-
-   - One short, warm opening line
-
-   - Clear explanation
-
-   - Bullet points for details (keep them very simple)
-
-   - One clear CTA button
-
-   - Helpful closing
-
-   - Sign-off: "Best regards, The BitPlay Team"
-
-### TONE GUIDELINES
-
-- Calm, friendly, and helpful
-
-- Very easy and natural language
-
-- Like talking to a friend who needs clear instructions
-
-### ADVANCED TECHNIQUES YOU MUST USE
-
-- Personalize with first name
-
-- Use bold for important numbers or codes (**$20**, **JOINUS**)
-
-- Create very clear flow: Thank you → What is new → What to do next
-
-- Make sure even a tired person can understand the email quickly
-
-- Keep total email short and scannable
-
-### OUTPUT FORMAT (Always use exactly this format)
-
-**Subject Line:**
-
-[Your subject here]
-
-**Preheader:**
-
-[Your preheader here]
-
-**Email Body:**
-
-[Full email with proper line breaks and markdown for bold]
-
----
-
-Now, using all the rules above, create a high-quality, very easy-to-read email for the details I provide.
-
-[USER'S OFFER DETAILS GO HERE]
-```
-
-- Add `buildFriendlyPrompt({ offerDetails, audience, brandName })`:
-  - Replaces only `[USER'S OFFER DETAILS GO HERE]` with the user's offer text.
-  - Appends the same minimal structured-output footer used for Primary mode (audience tone hint, optional brand sign-off override that swaps "BitPlay" → user's brand, and a tool-calling instruction). The original prompt body above is **never modified**.
-- Add `FRIENDLY_TOOL` (function name `return_friendly_email`) with 4 required fields matching the Friendly output format: `subject`, `preheader`, `body`, `cta`.
-- Update the handler branching:
-  ```ts
-  const prompt =
-    inboxType === "primary"  ? buildPrimaryPrompt(...)  :
-    inboxType === "friendly" ? buildFriendlyPrompt(...) :
-    buildPromotionalPrompt(...);
-
-  const tool =
-    inboxType === "primary"  ? PRIMARY_TOOL  :
-    inboxType === "friendly" ? FRIENDLY_TOOL :
-    PROMOTIONAL_TOOL;
-  ```
-- Friendly response shape: `{ inboxType: "friendly", subject, preheader, body, cta }`.
-
-### 2. Frontend — `src/components/EmailGenerator.tsx`
-
-- Extend `InboxType` to include `"friendly"` and add `FriendlyResult` (same shape as `PrimaryResult`).
-- Inbox-type selector: switch grid to `sm:grid-cols-3`, add a third button **Friendly** with a `Smile` icon. Subtitle stays neutral and does NOT hint at the underlying prompt — e.g. *"Simple, easy-to-read tone."*
-- Replace `isPrimary` checks with `isStrict = inboxType !== "promotional"` so Friendly also:
-  - Hides "Extra forbidden words" and "Spam categories" filters.
-  - Keeps Audience + Brand selectors.
-  - Shows a generic info note (no internal-prompt hints).
-- Output rendering: reuse the existing Primary output layout for Friendly results (Subject / Preheader / Email body with markdown bold / CTA). Extend `fullEmail` to handle the friendly branch identically to primary.
-- v2.0 badge stays as is.
-
-### Notes
-
-- Friendly prompt is its own constant — fully isolated from Primary and Promotional builders.
-- Only the `[USER'S OFFER DETAILS GO HERE]` placeholder is touched; everything above it is sent to the model byte-for-byte as you wrote it.
-- UI copy never reveals the prompt mechanics to end users.
+- Plaintext passwords are intentional per the request. If you ever want to harden this, we can switch to hashed passwords and remove the "view password" feature.
+- This is shared-secret login — no real Supabase Auth users. Simple and matches the goal of just attributing usage to a person.
