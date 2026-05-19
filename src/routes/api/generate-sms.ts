@@ -5,6 +5,17 @@ import {
   SMS_SAFE_REPLACEMENTS,
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
+import {
+  makeStandardCasualSeed,
+  makeNoSpamSeed,
+  renderStandardCasualSeedBlock,
+  renderNoSpamSeedBlock,
+  renderRecentTextsBlock,
+  fetchRecentTexts,
+  saveRecentTexts,
+  type StandardCasualSeed,
+  type NoSpamSeed,
+} from "@/server/sms-variation.server";
 
 type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo" | "non_spam";
@@ -37,9 +48,16 @@ type SmsBody = {
   freePlayReward?: string;
   extraForbidden?: string;
   activeCategories: SmsSpamCategoryId[];
+  siteId?: string;
 };
 
-function buildPrompt(input: SmsBody) {
+type PromptExtras = {
+  seedBlock?: string;
+  recentBlock?: string;
+};
+
+function buildPrompt(input: SmsBody, extras: PromptExtras = {}) {
+
   const forbiddenSet = new Set<string>();
   for (const cat of SMS_SPAM_CATEGORIES) {
     if (input.activeCategories.includes(cat.id)) {
@@ -180,6 +198,10 @@ VARIANTS — return THREE messages, each with a different opening structure so c
 - "nospamB": "Your profile currently qualifies for an adjusted credit allocation..."
 - "nospamC": "An adjusted balance update has been applied to your account..."
 
+${extras.seedBlock ?? ""}
+
+${extras.recentBlock ?? ""}
+
 Return your answer using the provided tool.`;
   }
 
@@ -193,6 +215,12 @@ Offer details: ${input.offerDetails}
 ${typeRules}
 
 LENGTH: ${lengthRule}
+
+${extras.seedBlock ?? ""}
+
+${extras.recentBlock ?? ""}
+
+
 
 VOICE — DAILY US TEXT MESSAGE:
 - Write the way Americans actually text each other. Loose, casual, conversational.
@@ -313,8 +341,38 @@ export const Route = createFileRoute("/api/generate-sms")({
             }
           }
 
-          const prompt = buildPrompt(body);
-          const nospamPrompt = buildPrompt({ ...body, smsType: "non_spam" });
+          const siteId = body.siteId?.trim() || null;
+
+          // Per-request creative seeds + recent-output memory (parallel fetch)
+          const stdCasualSeed: StandardCasualSeed = makeStandardCasualSeed();
+          const nospamSeed: NoSpamSeed = makeNoSpamSeed();
+
+          const [recentStandard, recentCasual, recentNospam] = await Promise.all([
+            fetchRecentTexts(siteId, body.smsType, "standard", 12),
+            fetchRecentTexts(siteId, body.smsType, "casual", 12),
+            fetchRecentTexts(siteId, "non_spam", "nospam", 12),
+          ]);
+
+          const stdCasualSeedBlock = renderStandardCasualSeedBlock(stdCasualSeed);
+          const stdCasualRecentBlock = [
+            renderRecentTextsBlock("STANDARD", recentStandard),
+            renderRecentTextsBlock("CASUAL", recentCasual),
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+
+          const nospamSeedBlock = renderNoSpamSeedBlock(nospamSeed);
+          const nospamRecentBlock = renderRecentTextsBlock("ACCOUNT-NOTIFICATION", recentNospam);
+
+          const prompt = buildPrompt(body, {
+            seedBlock: stdCasualSeedBlock,
+            recentBlock: stdCasualRecentBlock,
+          });
+          const nospamPrompt = buildPrompt(
+            { ...body, smsType: "non_spam" },
+            { seedBlock: nospamSeedBlock, recentBlock: nospamRecentBlock },
+          );
+
 
           const SMS_TOOL = {
             type: "function" as const,
@@ -379,9 +437,10 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
+          const AI_OPTS = { temperature: 1.0, top_p: 0.95 };
           const [result, nospamResult] = await Promise.all([
-            callClaudeWithTool(prompt, SMS_TOOL),
-            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL),
+            callClaudeWithTool(prompt, SMS_TOOL, AI_OPTS),
+            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL, AI_OPTS),
           ]);
           if (!result.ok) {
             return Response.json(
@@ -396,7 +455,32 @@ export const Route = createFileRoute("/api/generate-sms")({
               ? nospamResult.args
               : { nospamA: "", nospamB: "", nospamC: "" }),
           };
+
+          // Persist outputs as memory for future generations (fire-and-forget).
+          const asStr = (v: unknown) => (typeof v === "string" ? v : "");
+          const standardTexts = [
+            asStr(merged.message),
+            asStr(merged.standardA),
+            asStr(merged.standardB),
+          ].filter(Boolean);
+          const casualTexts = [
+            asStr(merged.casualA),
+            asStr(merged.casualB),
+            asStr(merged.casualC),
+          ].filter(Boolean);
+          const nospamTexts = [
+            asStr(merged.nospamA),
+            asStr(merged.nospamB),
+            asStr(merged.nospamC),
+          ].filter(Boolean);
+          void Promise.all([
+            saveRecentTexts(siteId, body.smsType, "standard", standardTexts),
+            saveRecentTexts(siteId, body.smsType, "casual", casualTexts),
+            nospamResult.ok ? saveRecentTexts(siteId, "non_spam", "nospam", nospamTexts) : Promise.resolve(),
+          ]).catch(() => {});
+
           return Response.json(merged);
+
 
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
