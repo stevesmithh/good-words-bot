@@ -437,9 +437,10 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
+          const AI_OPTS = { temperature: 1.0, top_p: 0.95 };
           const [result, nospamResult] = await Promise.all([
-            callClaudeWithTool(prompt, SMS_TOOL),
-            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL),
+            callClaudeWithTool(prompt, SMS_TOOL, AI_OPTS),
+            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL, AI_OPTS),
           ]);
           if (!result.ok) {
             return Response.json(
@@ -454,7 +455,32 @@ export const Route = createFileRoute("/api/generate-sms")({
               ? nospamResult.args
               : { nospamA: "", nospamB: "", nospamC: "" }),
           };
+
+          // Persist outputs as memory for future generations (fire-and-forget).
+          const asStr = (v: unknown) => (typeof v === "string" ? v : "");
+          const standardTexts = [
+            asStr(merged.message),
+            asStr(merged.standardA),
+            asStr(merged.standardB),
+          ].filter(Boolean);
+          const casualTexts = [
+            asStr(merged.casualA),
+            asStr(merged.casualB),
+            asStr(merged.casualC),
+          ].filter(Boolean);
+          const nospamTexts = [
+            asStr(merged.nospamA),
+            asStr(merged.nospamB),
+            asStr(merged.nospamC),
+          ].filter(Boolean);
+          void Promise.all([
+            saveRecentTexts(siteId, body.smsType, "standard", standardTexts),
+            saveRecentTexts(siteId, body.smsType, "casual", casualTexts),
+            nospamResult.ok ? saveRecentTexts(siteId, "non_spam", "nospam", nospamTexts) : Promise.resolve(),
+          ]).catch(() => {});
+
           return Response.json(merged);
+
 
         } catch (err) {
           const message = err instanceof Error ? err.message : "Unknown error";
