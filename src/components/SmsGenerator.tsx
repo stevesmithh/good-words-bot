@@ -511,6 +511,41 @@ export function SmsGenerator() {
             </div>
           )}
 
+          {smsType === "non_spam" && (
+            <div className="space-y-3">
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                Transactional account-notification style. Reads like a system message — no brand, no promo language, neutral vocabulary only. Designed to maximize US carrier deliverability.
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nsPromo">
+                    Promo code <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="nsPromo"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="MEGAGEM40"
+                    aria-invalid={!!errors.promo}
+                  />
+                  {errors.promo && <p className="text-xs text-destructive">{errors.promo}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nsRef">Value reference (optional)</Label>
+                  <Input
+                    id="nsRef"
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(e.target.value)}
+                    placeholder="40"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mentioned only as a neutral reference (e.g. "tier 40 credit"). No %, $, or "bonus".
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="smsOffer">
               Offer details <span className="text-destructive">*</span>
