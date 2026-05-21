@@ -327,30 +327,10 @@ export async function saveRecentTexts(
     }));
   if (rows.length === 0) return;
   try {
+    // Fire-and-forget insert only. The lazy cleanup that used to run here
+    // doubled the DB round-trips per generation; cleanup is not on the
+    // critical path and can be handled separately if the table grows.
     await supabaseAdmin.from("recent_sms_outputs").insert(rows);
-    // Lazy cleanup: keep only the most recent 50 rows per (site,type,variant).
-    const { data: keepers } = await supabaseAdmin
-      .from("recent_sms_outputs")
-      .select("id")
-      .eq("sms_type", smsType)
-      .eq("variant", variantGroup)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (keepers && keepers.length === 50) {
-      const keepIds = keepers.map((k) => k.id);
-      let del = supabaseAdmin
-        .from("recent_sms_outputs")
-        .delete()
-        .eq("sms_type", smsType)
-        .eq("variant", variantGroup)
-        .not("id", "in", `(${keepIds.map((id) => `"${id}"`).join(",")})`);
-      if (siteId) {
-        del = del.eq("site_id", siteId);
-      } else {
-        del = del.is("site_id", null);
-      }
-      await del;
-    }
   } catch {
     // best-effort; never block the response
   }
@@ -358,7 +338,17 @@ export async function saveRecentTexts(
 
 export function renderRecentTextsBlock(label: string, texts: string[]): string {
   if (texts.length === 0) return "";
-  const numbered = texts.map((t, i) => `  ${i + 1}. ${t}`).join("\n");
-  return `RECENT ${label} SENDS — DO NOT mirror these openers, phrasings, sentence shapes, emoji choices, or word picks. Make every new variant feel distinctly different from these:
+  // Keep prompt weight low: send only the first ~80 chars of each recent send.
+  // That is enough signal for the model to avoid mirroring openings and shapes,
+  // without bloating the prompt and slowing generation.
+  const numbered = texts
+    .slice(0, 5)
+    .map((t, i) => {
+      const trimmed = t.length > 80 ? `${t.slice(0, 80)}…` : t;
+      return `  ${i + 1}. ${trimmed}`;
+    })
+    .join("\n");
+  return `RECENT ${label} SENDS — do NOT mirror their openers, shapes, or phrasing:
 ${numbered}`;
 }
+
