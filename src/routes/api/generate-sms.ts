@@ -348,10 +348,11 @@ export const Route = createFileRoute("/api/generate-sms")({
           const nospamSeed: NoSpamSeed = makeNoSpamSeed();
 
           const [recentStandard, recentCasual, recentNospam] = await Promise.all([
-            fetchRecentTexts(siteId, body.smsType, "standard", 12),
-            fetchRecentTexts(siteId, body.smsType, "casual", 12),
-            fetchRecentTexts(siteId, "non_spam", "nospam", 12),
+            fetchRecentTexts(siteId, body.smsType, "standard", 5),
+            fetchRecentTexts(siteId, body.smsType, "casual", 5),
+            fetchRecentTexts(siteId, "non_spam", "nospam", 5),
           ]);
+
 
           const stdCasualSeedBlock = renderStandardCasualSeedBlock(stdCasualSeed);
           const stdCasualRecentBlock = [
