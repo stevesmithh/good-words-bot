@@ -1,65 +1,66 @@
-# Make every SMS generation feel unique
+# Stabilize and speed up SMS generation
 
 ## Problem
-The team generates SMS daily with the same site / promotion / SMS type. Right now each run starts from the same prompt with no randomness and no awareness of what was sent before, so outputs cluster around the same openers, sentence shapes, and emoji choices. Over a week it reads like the same handful of messages on repeat.
+The SMS generator currently feels slow, often repeats itself, and sometimes fails with `API error: 502 — Could not parse response`.
+
+The likely causes are:
+- Two separate AI generations run for every request (6 regular variants + 3 no-spam variants).
+- Each call includes large prompt instructions plus recent-history blocks, which increases latency.
+- The model is set to high randomness (`temperature: 1.0`, `top_p: 0.95`), which helps variety but also makes function-call output less reliable.
+- The anti-repetition memory currently adds too much prompt weight for a tool that needs to be fast and stable for daily team use.
 
 ## Goal
-Each generation — even with identical inputs — should feel meaningfully different from the previous runs of the same team, while still following all spam-safe and length rules.
+- Faster SMS generation
+- Stable output with far fewer 502 parse failures
+- Better variation between runs
+- Keep all 9 outputs, including the no-spam set
+- Preserve carrier-safe / no-spam constraints
 
-## Approach
-Three layers of variation, stacked:
+## Plan
 
-### 1. Model-level randomness
-- Raise the model's creativity dial (`temperature` ~1.0, `top_p` ~0.95) on the AI gateway call. Right now no temperature is passed, so the model behaves near-deterministic.
+### 1. Make the AI response path more reliable
+- Lower creativity slightly for structured tool calls so the model still varies wording but follows the expected response shape more consistently.
+- Add a retry/fallback path in the server helper:
+  - first attempt: balanced creativity for variety
+  - automatic retry on parse failure: lower temperature and simplified prompt pressure
+- Improve server-side error handling so malformed tool output does not surface as a vague failure when it can be recovered.
 
-### 2. Per-request creative seed
-For every generation, the server randomly picks fresh "creative ingredients" and bakes them into the prompt:
-- A different shuffled opener pool for each of the 6 (Standard + Casual) variants, drawn from a much larger master pool.
-- A rotated "sentence shape" hint per variant (e.g. "start with a question", "two short fragments", "single statement", "imperative line", "two-clause sentence with em-dash").
-- A rotated micro-tone modifier (e.g. "playful", "matter-of-fact", "warm", "low-key", "curious", "direct").
-- A rotated emoji policy (none / single optional / one specific allowed emoji from a rotating set).
-- A small random "vibe word" that flavors the message without being mandatory.
+### 2. Reduce prompt weight to improve speed
+- Shrink the recent-history payload from the current large blocks to a smaller, high-signal sample.
+- Trim seed instructions so they still force diversity without overloading the model.
+- Keep no-spam rules strict, but remove redundant wording from the prompt.
 
-Because the seed differs every call, the prompt itself differs every call, which materially changes output even at the same temperature.
+### 3. Keep uniqueness without slowing the tool down
+- Retain recent-output memory, but make it lighter:
+  - fewer recent examples per group
+  - emphasize “don’t mirror openings/shape” instead of sending long history every time
+- Keep randomized opener/shape/tone seeds so outputs still differ across runs even after reducing history.
+- Tune the balance toward fast, distinct copy instead of maximum novelty.
 
-### 3. Memory of recent outputs (anti-repetition)
-Persist the texts of the last ~30 generations per `(site_id, sms_type)` and feed the most recent 15 back into the prompt as a "RECENT SENDS — do NOT mirror these openers, phrasings, sentence shapes, or emoji" block. The model is explicitly told these are off-limits as templates.
+### 4. Optimize the no-spam generation path
+- Keep the no-spam variants automatic and always included on the right side with the other outputs.
+- Simplify the no-spam prompt to prioritize safety and deterministic formatting.
+- If needed, make the no-spam call stricter than the marketing/casual call so it stays stable without hurting the other variants.
 
-This is the single biggest win: it directly addresses "the texts are very similar each day", because the model literally sees yesterday's outputs and is told to diverge.
+### 5. Improve user-facing failure behavior
+- Return clearer API errors from the SMS route.
+- Expose raw failure details in a safer, more useful way for debugging instead of only “Could not parse response”.
+- Ensure one unstable sub-call does not unnecessarily break the whole generation when a graceful fallback is possible.
 
-Also applies to the No-Spam group on its own track (its own recent-sends memory).
+## Expected outcome
+- Noticeably faster generation time
+- Much fewer 502 parse failures
+- More diverse SMS text from day to day
+- No-spam variants remain safe and present in every generation
+- Better stability for daily team use
 
 ## Technical details
-
-### Database
-New table `recent_sms_outputs`:
-- `id uuid pk`
-- `site_id text` (nullable — falls back to global)
-- `sms_type text` (`promotional` | `deposit_coupon` | `deposit_bonus` | `signup_promo` | `non_spam`)
-- `variant text` (`standard` | `casual` | `nospam`)
-- `text text`
-- `created_at timestamptz default now()`
-- Indexes on `(site_id, sms_type, created_at desc)` and a TTL-style cleanup keeping only the last 50 rows per group (done lazily on insert).
-- RLS: no public access (server-only via service-role client, same pattern as `generation_events`).
-
-### Server changes (`src/routes/api/generate-sms.ts`)
-- Add `seedCreative(input)` helper that returns: per-variant opener pool, sentence shape, tone, emoji policy, vibe word — all chosen by `Math.random()` from large master lists.
-- Add `fetchRecentTexts(site_id, sms_type, variantGroup, limit=15)` using the service-role client.
-- Add `saveRecentTexts(site_id, sms_type, variantGroup, texts[])` after a successful generation (fire-and-forget, do not block response).
-- Modify `buildPrompt` to:
-  - Accept the creative seed and inject a "VARIATION SEED" block listing each variant's chosen opener pool, shape, tone, emoji policy.
-  - Inject a "RECENT SENDS — avoid mirroring" block with the fetched recent texts.
-- Update `callClaudeWithTool` (or pass options through) to send `temperature: 1.0` and `top_p: 0.95`.
-- Same memory + seed mechanism wired for the parallel No-Spam call, scoped to `variant=nospam`.
-
-### Master pools (server-only constants)
-- ~30 standard openers, ~40 casual openers (curiosity / friend-rec / fyi each get their own larger pool), ~12 No-Spam opening structures.
-- ~8 sentence shapes, ~8 tone modifiers, ~6 emoji policies, ~25 vibe words.
-
-### No UI changes
-This is entirely server-side. The form stays as-is and the output area stays as-is — the messages it shows just stop repeating themselves.
+- Update `src/server/anthropic.server.ts` to support retry/fallback behavior for malformed tool-call responses.
+- Update `src/routes/api/generate-sms.ts` to reduce prompt size, tune generation settings, and degrade gracefully when one branch misbehaves.
+- Update `src/server/sms-variation.server.ts` to make anti-repetition lighter and faster.
+- Keep database changes minimal unless a small cleanup is needed; priority is app speed and stability, not expanding backend complexity.
 
 ## Out of scope
-- No change to the SMS type picker, the No-Spam rendering, the short-link flow, or the length / spam-category controls.
-- No global "regenerate with more variation" button — variation becomes the default.
-- No per-user memory (anti-repetition is per site + sms_type, shared across the team, which matches how they actually send).
+- No redesign of the SMS UI
+- No async job/webhook architecture unless the lighter synchronous fix still proves too slow after tuning
+- No changes to email generation
