@@ -438,11 +438,15 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
-          const AI_OPTS = { temperature: 1.0, top_p: 0.95 };
+          // Balanced creativity: varied phrasing without hurting tool-call reliability.
+          // The helper retries automatically with lower temperature on parse failure.
+          const AI_OPTS = { temperature: 0.85, top_p: 0.9 };
+          const NOSPAM_AI_OPTS = { temperature: 0.55, top_p: 0.9 };
           const [result, nospamResult] = await Promise.all([
             callClaudeWithTool(prompt, SMS_TOOL, AI_OPTS),
-            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL, AI_OPTS),
+            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL, NOSPAM_AI_OPTS),
           ]);
+
           if (!result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
