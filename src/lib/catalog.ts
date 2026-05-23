@@ -33,18 +33,26 @@ export type Catalog = {
 async function fetchProviders(): Promise<Provider[]> {
   const sess = getSession();
   if (!sess) return [];
-  const res = await fetch("/api/auth", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action: "listProviders",
-      username: sess.username,
-      password: sess.password,
-    }),
-  });
-  if (!res.ok) throw new Error("Failed to load providers");
-  const data = await res.json();
-  return (data.providers ?? []) as Provider[];
+  try {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "listProviders",
+        username: sess.username,
+        password: sess.password,
+      }),
+    });
+    if (!res.ok) {
+      console.error("[catalog] listProviders failed:", res.status);
+      return [];
+    }
+    const data = await res.json();
+    return (data.providers ?? []) as Provider[];
+  } catch (err) {
+    console.error("[catalog] listProviders error:", err);
+    return [];
+  }
 }
 
 async function fetchCatalog(): Promise<Catalog> {
