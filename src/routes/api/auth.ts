@@ -117,6 +117,20 @@ export const Route = createFileRoute("/api/auth")({
             return Response.json({ success: true });
           }
 
+          // Any logged-in member can fetch the SMS providers catalog
+          if (body.action === "listProviders") {
+            const { data, error } = await supabase
+              .from("sms_providers")
+              .select("id, name, sort_order")
+              .order("sort_order");
+            if (error) {
+              console.error("[auth] listProviders error:", error);
+              return bad("Database operation failed", 500);
+            }
+            return Response.json({ providers: data ?? [] });
+          }
+
+
           // Admin-only actions
           if (!me.is_admin) return bad("Admin only", 403);
 
