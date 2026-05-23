@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCatalog, type Site, type Promotion, type Provider } from "@/lib/catalog";
-import { getSession } from "@/lib/session";
+import { getSession, setSession } from "@/lib/session";
 
 const SESSION_KEY = "admin_code";
 
@@ -921,12 +921,21 @@ function TeamPanel() {
     const patch = edits[m.id] ?? {};
     setBusy(m.id);
     try {
+      const newUsername = patch.username ?? m.username;
+      const newPassword = patch.password ?? m.password;
+      const newIsAdmin = patch.is_admin ?? m.is_admin;
       await authApi("upsertMember", {
         id: m.id,
-        newUsername: patch.username ?? m.username,
-        newPassword: patch.password ?? m.password,
-        isAdmin: patch.is_admin ?? m.is_admin,
+        newUsername,
+        newPassword,
+        isAdmin: newIsAdmin,
       });
+      // If admin edited their own account, refresh local session credentials
+      // so subsequent authenticated requests don't 401.
+      const sess = getSession();
+      if (sess && sess.username === m.username) {
+        setSession({ username: newUsername, password: newPassword, isAdmin: newIsAdmin });
+      }
       toast.success("Saved");
       setEdits((e) => {
         const { [m.id]: _, ...rest } = e;
