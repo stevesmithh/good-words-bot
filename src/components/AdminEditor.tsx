@@ -904,7 +904,7 @@ function TeamPanel() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [edits, setEdits] = useState<Record<string, Partial<Member>>>({});
+  const [edits, setEdits] = useState<Record<string, MemberPatch>>({});
   const [nw, setNw] = useState({ username: "", password: "", is_admin: false });
 
   const refresh = async () => {
