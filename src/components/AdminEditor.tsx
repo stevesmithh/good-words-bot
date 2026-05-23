@@ -889,10 +889,16 @@ function UsagePanel() {
 type Member = {
   id: string;
   username: string;
-  password: string;
   is_admin: boolean;
   created_at: string;
 };
+
+type MemberPatch = {
+  username?: string;
+  password?: string;
+  is_admin?: boolean;
+};
+
 
 function TeamPanel() {
   const [members, setMembers] = useState<Member[]>([]);
