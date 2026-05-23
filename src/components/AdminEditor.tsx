@@ -1006,7 +1006,7 @@ function TeamPanel() {
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>
-              <TableHead>Password</TableHead>
+              <TableHead>New password</TableHead>
               <TableHead className="w-[80px] text-center">Admin</TableHead>
               <TableHead className="w-[110px]">Actions</TableHead>
             </TableRow>
