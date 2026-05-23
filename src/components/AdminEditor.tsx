@@ -1027,12 +1027,15 @@ function TeamPanel() {
                   </TableCell>
                   <TableCell>
                     <Input
-                      value={patch.password ?? m.password}
+                      type="password"
+                      placeholder="Leave blank to keep"
+                      value={patch.password ?? ""}
                       onChange={(e) =>
                         setEdits((p) => ({ ...p, [m.id]: { ...p[m.id], password: e.target.value } }))
                       }
                       className="font-mono text-xs"
                     />
+
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox
