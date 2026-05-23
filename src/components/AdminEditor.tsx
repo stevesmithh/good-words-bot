@@ -921,12 +921,21 @@ function TeamPanel() {
     const patch = edits[m.id] ?? {};
     setBusy(m.id);
     try {
+      const newUsername = patch.username ?? m.username;
+      const newPassword = patch.password ?? m.password;
+      const newIsAdmin = patch.is_admin ?? m.is_admin;
       await authApi("upsertMember", {
         id: m.id,
-        newUsername: patch.username ?? m.username,
-        newPassword: patch.password ?? m.password,
-        isAdmin: patch.is_admin ?? m.is_admin,
+        newUsername,
+        newPassword,
+        isAdmin: newIsAdmin,
       });
+      // If admin edited their own account, refresh local session credentials
+      // so subsequent authenticated requests don't 401.
+      const sess = getSession();
+      if (sess && sess.username === m.username) {
+        setSession({ username: newUsername, password: newPassword, isAdmin: newIsAdmin });
+      }
       toast.success("Saved");
       setEdits((e) => {
         const { [m.id]: _, ...rest } = e;
