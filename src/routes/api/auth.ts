@@ -1,5 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
+
+const BCRYPT_ROUNDS = 10;
+
+function isBcryptHash(v: string): boolean {
+  return typeof v === "string" && /^\$2[aby]\$/.test(v);
+}
+
+async function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, BCRYPT_ROUNDS);
+}
 
 function getSupabaseAdmin() {
   const url = process.env.SUPABASE_URL;
@@ -17,6 +28,7 @@ function asStr(v: unknown): string | null {
 }
 
 // Verify the requester is a valid team member; returns the row or null.
+// Supports both bcrypt hashes and legacy plaintext (auto-upgrades on match).
 async function verifyMember(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   username: string,
@@ -28,7 +40,28 @@ async function verifyMember(
     .eq("username", username)
     .maybeSingle();
   if (error || !data) return null;
-  if (data.password !== password) return null;
+
+  const stored = data.password as string;
+  let ok = false;
+  if (isBcryptHash(stored)) {
+    try {
+      ok = await bcrypt.compare(password, stored);
+    } catch {
+      ok = false;
+    }
+  } else {
+    // Legacy plaintext fallback — verify, then upgrade to bcrypt in place.
+    ok = stored === password;
+    if (ok) {
+      try {
+        const hashed = await hashPassword(password);
+        await supabase.from("team_members").update({ password: hashed }).eq("id", data.id);
+      } catch (e) {
+        console.error("[auth] password auto-upgrade failed:", e);
+      }
+    }
+  }
+  if (!ok) return null;
   return data;
 }
 
