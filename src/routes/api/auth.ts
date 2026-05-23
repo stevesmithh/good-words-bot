@@ -171,7 +171,7 @@ export const Route = createFileRoute("/api/auth")({
             case "listMembers": {
               const { data, error } = await supabase
                 .from("team_members")
-                .select("id, username, password, is_admin, created_at")
+                .select("id, username, is_admin, created_at")
                 .order("created_at", { ascending: true });
               if (error) {
                 console.error("[auth] listMembers error:", error);
@@ -183,23 +183,38 @@ export const Route = createFileRoute("/api/auth")({
             case "upsertMember": {
               const id = asStr(body.id);
               const username = asStr(body.newUsername);
-              const password = asStr(body.newPassword);
+              const password = asStr(body.newPassword); // optional on update
               const isAdmin = !!body.isAdmin;
-              if (!username || !password) return bad("Username and password required");
-              if (username.length > 100 || password.length > 200) return bad("Field too long");
+              if (!username) return bad("Username required");
+              if (username.length > 100) return bad("Field too long");
+              if (password && password.length > 200) return bad("Field too long");
               if (id) {
-                const { error } = await supabase
-                  .from("team_members")
-                  .update({ username, password, is_admin: isAdmin })
-                  .eq("id", id);
-                if (error) {
-                  console.error("[auth] update member error:", error);
-                  return bad(error.message.includes("duplicate") ? "Username already taken" : "Database operation failed", 500);
+                if (!password) {
+                  const { error } = await supabase
+                    .from("team_members")
+                    .update({ username, is_admin: isAdmin })
+                    .eq("id", id);
+                  if (error) {
+                    console.error("[auth] update member error:", error);
+                    return bad(error.message.includes("duplicate") ? "Username already taken" : "Database operation failed", 500);
+                  }
+                } else {
+                  const hashed = await hashPassword(password);
+                  const { error } = await supabase
+                    .from("team_members")
+                    .update({ username, password: hashed, is_admin: isAdmin })
+                    .eq("id", id);
+                  if (error) {
+                    console.error("[auth] update member error:", error);
+                    return bad(error.message.includes("duplicate") ? "Username already taken" : "Database operation failed", 500);
+                  }
                 }
               } else {
+                if (!password) return bad("Password required for new members");
+                const hashed = await hashPassword(password);
                 const { error } = await supabase
                   .from("team_members")
-                  .insert({ username, password, is_admin: isAdmin });
+                  .insert({ username, password: hashed, is_admin: isAdmin });
                 if (error) {
                   console.error("[auth] insert member error:", error);
                   return bad(error.message.includes("duplicate") ? "Username already taken" : "Database operation failed", 500);
@@ -207,6 +222,7 @@ export const Route = createFileRoute("/api/auth")({
               }
               return Response.json({ success: true });
             }
+
 
             case "deleteMember": {
               const id = asStr(body.id);
