@@ -889,16 +889,22 @@ function UsagePanel() {
 type Member = {
   id: string;
   username: string;
-  password: string;
   is_admin: boolean;
   created_at: string;
 };
+
+type MemberPatch = {
+  username?: string;
+  password?: string;
+  is_admin?: boolean;
+};
+
 
 function TeamPanel() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [edits, setEdits] = useState<Record<string, Partial<Member>>>({});
+  const [edits, setEdits] = useState<Record<string, MemberPatch>>({});
   const [nw, setNw] = useState({ username: "", password: "", is_admin: false });
 
   const refresh = async () => {
@@ -922,19 +928,23 @@ function TeamPanel() {
     setBusy(m.id);
     try {
       const newUsername = patch.username ?? m.username;
-      const newPassword = patch.password ?? m.password;
+      const newPassword = patch.password ?? "";
       const newIsAdmin = patch.is_admin ?? m.is_admin;
       await authApi("upsertMember", {
         id: m.id,
         newUsername,
-        newPassword,
+        ...(newPassword ? { newPassword } : {}),
         isAdmin: newIsAdmin,
       });
       // If admin edited their own account, refresh local session credentials
       // so subsequent authenticated requests don't 401.
       const sess = getSession();
       if (sess && sess.username === m.username) {
-        setSession({ username: newUsername, password: newPassword, isAdmin: newIsAdmin });
+        setSession({
+          username: newUsername,
+          password: newPassword || sess.password,
+          isAdmin: newIsAdmin,
+        });
       }
       toast.success("Saved");
       setEdits((e) => {
@@ -996,7 +1006,7 @@ function TeamPanel() {
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>
-              <TableHead>Password</TableHead>
+              <TableHead>New password</TableHead>
               <TableHead className="w-[80px] text-center">Admin</TableHead>
               <TableHead className="w-[110px]">Actions</TableHead>
             </TableRow>
@@ -1017,12 +1027,15 @@ function TeamPanel() {
                   </TableCell>
                   <TableCell>
                     <Input
-                      value={patch.password ?? m.password}
+                      type="password"
+                      placeholder="Leave blank to keep"
+                      value={patch.password ?? ""}
                       onChange={(e) =>
                         setEdits((p) => ({ ...p, [m.id]: { ...p[m.id], password: e.target.value } }))
                       }
                       className="font-mono text-xs"
                     />
+
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox
