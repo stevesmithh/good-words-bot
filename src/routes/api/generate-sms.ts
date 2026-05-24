@@ -551,7 +551,7 @@ export const Route = createFileRoute("/api/generate-sms")({
           const [recentStandard, recentCasual, recentNospam] = await Promise.all([
             needStdCasual ? fetchRecentTexts(siteId, body.smsType, "standard", 5) : Promise.resolve<string[]>([]),
             needStdCasual ? fetchRecentTexts(siteId, body.smsType, "casual", 5) : Promise.resolve<string[]>([]),
-            needNospam ? fetchRecentTexts(siteId, "non_spam", "nospam", 5) : Promise.resolve<string[]>([]),
+            needNospam ? fetchRecentTexts(siteId, "non_spam", "nospam", 12) : Promise.resolve<string[]>([]),
           ]);
 
           const stdCasualSeedBlock = renderStandardCasualSeedBlock(stdCasualSeed);
@@ -615,9 +615,9 @@ export const Route = createFileRoute("/api/generate-sms")({
               parameters: {
                 type: "object",
                 properties: {
-                  nospamA: { type: "string", description: "Account-notification variant A. Starts with 'A balance enhancement...'. Never uses the word 'code'." },
-                  nospamB: { type: "string", description: "Account-notification variant B. Starts with 'Your profile currently qualifies...'. Never uses the word 'code'." },
-                  nospamC: { type: "string", description: "Account-notification variant C. Starts with 'An adjusted balance update...'. Never uses the word 'code'." },
+                  nospamA: { type: "string", description: "Account-notification variant A. Must use its assigned seed opener, stay neutral, and be materially different from the other no-spam variants. Never uses the word 'code'." },
+                  nospamB: { type: "string", description: "Account-notification variant B. Must use its assigned seed opener, stay neutral, and be materially different from the other no-spam variants. Never uses the word 'code'." },
+                  nospamC: { type: "string", description: "Account-notification variant C. Must use its assigned seed opener, stay neutral, and be materially different from the other no-spam variants. Never uses the word 'code'." },
                 },
                 required: ["nospamA", "nospamB", "nospamC"],
                 additionalProperties: false,
