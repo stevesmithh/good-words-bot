@@ -59,6 +59,182 @@ type PromptExtras = {
   recentBlock?: string;
 };
 
+type AiResult = Awaited<ReturnType<typeof callClaudeWithTool>>;
+type AiTool = Parameters<typeof callClaudeWithTool>[1];
+
+const NOSPAM_VARIANT_KEYS = ["nospamA", "nospamB", "nospamC"] as const;
+
+function stripSmsLink(text: string): string {
+  return text.replace(/https?:\/\/\S+/gi, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeSmsFingerprint(text: string): string {
+  return stripSmsLink(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function leadingWords(text: string, count = 5): string {
+  return normalizeSmsFingerprint(text).split(" ").filter(Boolean).slice(0, count).join(" ");
+}
+
+function makeBigrams(value: string): string[] {
+  if (value.length < 2) return value ? [value] : [];
+  const compact = value.replace(/\s+/g, " ");
+  const grams: string[] = [];
+  for (let i = 0; i < compact.length - 1; i++) {
+    grams.push(compact.slice(i, i + 2));
+  }
+  return grams;
+}
+
+function diceCoefficient(a: string, b: string): number {
+  const left = makeBigrams(a);
+  const right = makeBigrams(b);
+  if (!left.length || !right.length) return 0;
+
+  const counts = new Map<string, number>();
+  for (const gram of left) {
+    counts.set(gram, (counts.get(gram) ?? 0) + 1);
+  }
+
+  let overlap = 0;
+  for (const gram of right) {
+    const remaining = counts.get(gram) ?? 0;
+    if (remaining > 0) {
+      counts.set(gram, remaining - 1);
+      overlap += 1;
+    }
+  }
+
+  return (2 * overlap) / (left.length + right.length);
+}
+
+function tokenOverlapRatio(a: string, b: string): number {
+  const left = new Set(a.split(" ").filter(Boolean));
+  const right = new Set(b.split(" ").filter(Boolean));
+  if (!left.size || !right.size) return 0;
+
+  let overlap = 0;
+  for (const token of left) {
+    if (right.has(token)) overlap += 1;
+  }
+
+  return overlap / Math.min(left.size, right.size);
+}
+
+function isNearDuplicateNoSpam(a: string, b: string): boolean {
+  const normalizedA = normalizeSmsFingerprint(a);
+  const normalizedB = normalizeSmsFingerprint(b);
+  if (!normalizedA || !normalizedB) return false;
+  if (normalizedA === normalizedB) return true;
+
+  const leadA = leadingWords(a);
+  const leadB = leadingWords(b);
+  if (leadA && leadA === leadB) return true;
+
+  const dice = diceCoefficient(normalizedA, normalizedB);
+  const overlap = tokenOverlapRatio(normalizedA, normalizedB);
+  return dice >= 0.86 || (dice >= 0.76 && overlap >= 0.82);
+}
+
+function collectNoSpamTexts(args: Record<string, unknown>): string[] {
+  return NOSPAM_VARIANT_KEYS.map((key) => (typeof args[key] === "string" ? args[key].trim() : "")).filter(Boolean);
+}
+
+function renderRejectedNoSpamBlock(texts: string[]): string {
+  if (texts.length === 0) return "";
+
+  const items = texts
+    .slice(-6)
+    .map((text, index) => {
+      const trimmed = stripSmsLink(text);
+      const preview = trimmed.length > 90 ? `${trimmed.slice(0, 90)}…` : trimmed;
+      return `  ${index + 1}. ${preview}`;
+    })
+    .join("\n");
+
+  return `REJECTED OUTPUTS — these were too similar and must NOT be echoed, paraphrased, or lightly reshuffled:
+${items}
+- Do not reuse their first five words.
+- Do not reuse their sentence skeletons with swapped nouns.
+- Your next attempt must be materially different from every line above.`;
+}
+
+function validateNoSpamUniqueness(texts: string[], comparisonPool: string[]): { ok: true } | { ok: false; reason: string } {
+  if (texts.length !== 3) {
+    return { ok: false, reason: "The AI did not return all three no-spam variants." };
+  }
+
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      if (isNearDuplicateNoSpam(texts[i], texts[j])) {
+        return { ok: false, reason: "The three no-spam variants are too similar to each other." };
+      }
+    }
+  }
+
+  for (const text of texts) {
+    for (const previous of comparisonPool) {
+      if (isNearDuplicateNoSpam(text, previous)) {
+        return { ok: false, reason: "The new no-spam output is too similar to a recent or rejected send." };
+      }
+    }
+  }
+
+  return { ok: true };
+}
+
+async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], tool: AiTool): Promise<AiResult> {
+  const rejected: string[] = [];
+  let lastFailure: AiResult = {
+    ok: false,
+    status: 502,
+    error: "AI did not return a usable no-spam response",
+  };
+
+  for (const temperature of [0.55, 0.72, 0.88]) {
+    const recentBlock = [
+      renderRecentTextsBlock("ACCOUNT-NOTIFICATION", recentNospam),
+      renderRejectedNoSpamBlock(rejected),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const result = await callClaudeWithTool(
+      buildPrompt(
+        { ...body, smsType: "non_spam" },
+        { seedBlock: renderNoSpamSeedBlock(makeNoSpamSeed()), recentBlock },
+      ),
+      tool,
+      { temperature, top_p: 0.9 },
+    );
+
+    if (!result.ok) {
+      lastFailure = result;
+      continue;
+    }
+
+    const texts = collectNoSpamTexts(result.args);
+    const uniqueness = validateNoSpamUniqueness(texts, [...recentNospam, ...rejected]);
+    if (uniqueness.ok) {
+      return result;
+    }
+
+    rejected.push(...texts);
+    lastFailure = {
+      ok: false,
+      status: 409,
+      error: "Generated no-spam variants were too similar.",
+      details: uniqueness.reason,
+    };
+  }
+
+  return lastFailure;
+}
+
 function buildPrompt(input: SmsBody, extras: PromptExtras = {}) {
 
   const forbiddenSet = new Set<string>();
@@ -173,7 +349,7 @@ LENGTH: Each message under 200 characters TOTAL including the link.
 
 VOICE — STRICT:
 - Tone: neutral, factual, third-person account-system notification.
-- Style references (mirror this register):
+- Style references (register examples only — DO NOT reuse these exact openings or sentence skeletons):
   · "A balance enhancement is currently available on your account. Apply ${codeValue || "REF40"} to continue: link"
   · "Your account is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
   · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${codeValue || "REF40"} - link"
@@ -195,11 +371,15 @@ HARD RULES:
 - NEVER use the literal English word "code" (or "promo code", "use code").
 - No marketing language. No urgency. No superlatives. No emoji.
 - Each variant must sound like a system-generated account notice.
+- Each variant must use its assigned opener from the VARIATION SEED.
+- The first five words of each variant must be different from each other.
+- Do NOT reuse the same sentence skeleton with swapped nouns like account/profile/balance.
 
-VARIANTS — return THREE messages, each with a different opening structure so carriers don't dedupe:
-- "nospamA": "A balance enhancement is currently available on your account..."
-- "nospamB": "Your profile currently qualifies for an adjusted credit allocation..."
-- "nospamC": "An adjusted balance update has been applied to your account..."
+VARIANTS — return THREE messages that stay carrier-safe but are materially different from one another:
+- "nospamA", "nospamB", and "nospamC"
+- Each one must use a different opening structure from the VARIATION SEED.
+- Do not lightly paraphrase one variant into another.
+- Do not reuse the same first clause across variants.
 
 ${extras.seedBlock ?? ""}
 
