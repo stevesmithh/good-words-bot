@@ -16,7 +16,8 @@ export type AnthropicResult =
   | { ok: false; status: number; error: string; details?: string };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-pro";
+// Faster model with comparable quality for short SMS copy with tool calls.
+const MODEL = "google/gemini-3-flash-preview";
 
 export async function callClaudeWithTool(
   prompt: string,

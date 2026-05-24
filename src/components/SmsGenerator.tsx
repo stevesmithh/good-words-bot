@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,14 +48,15 @@ type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
+type ContentGroup = "standard" | "casual" | "nospam";
 
 type SmsResult = {
-  message: string;
-  standardA: string;
-  standardB: string;
-  casualA: string;
-  casualB: string;
-  casualC: string;
+  message?: string;
+  standardA?: string;
+  standardB?: string;
+  casualA?: string;
+  casualB?: string;
+  casualC?: string;
   nospamA?: string;
   nospamB?: string;
   nospamC?: string;
@@ -97,6 +99,21 @@ export function SmsGenerator() {
   const [activeCategories, setActiveCategories] = useState<Set<SmsSpamCategoryId>>(
     () => new Set(SMS_SPAM_CATEGORIES.map((c) => c.id)),
   );
+  const [groups, setGroups] = useState<Set<ContentGroup>>(
+    () => new Set<ContentGroup>(["standard", "casual", "nospam"]),
+  );
+
+  const toggleGroup = (g: ContentGroup) => {
+    setGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(g)) {
+        if (next.size > 1) next.delete(g);
+      } else {
+        next.add(g);
+      }
+      return next;
+    });
+  };
 
   // Site / promotion / provider — driven by DB-backed catalog
   const { data: catalog } = useCatalog();
@@ -214,6 +231,7 @@ export function SmsGenerator() {
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
         siteId: siteId || undefined,
+        groups: Array.from(groups),
       };
 
       if (smsType === "deposit_coupon") {
@@ -290,14 +308,13 @@ export function SmsGenerator() {
 
   const allVariants = useMemo(() => {
     if (!result) return "";
-    const parts = [
-      `Standard — Primary:\n${result.message}`,
-      `Standard A:\n${result.standardA}`,
-      `Standard B:\n${result.standardB}`,
-      `Casual A:\n${result.casualA}`,
-      `Casual B:\n${result.casualB}`,
-      `Casual C:\n${result.casualC}`,
-    ];
+    const parts: string[] = [];
+    if (result.message) parts.push(`Standard — Primary:\n${result.message}`);
+    if (result.standardA) parts.push(`Standard A:\n${result.standardA}`);
+    if (result.standardB) parts.push(`Standard B:\n${result.standardB}`);
+    if (result.casualA) parts.push(`Casual A:\n${result.casualA}`);
+    if (result.casualB) parts.push(`Casual B:\n${result.casualB}`);
+    if (result.casualC) parts.push(`Casual C:\n${result.casualC}`);
     if (result.nospamA) parts.push(`No-Spam A:\n${result.nospamA}`);
     if (result.nospamB) parts.push(`No-Spam B:\n${result.nospamB}`);
     if (result.nospamC) parts.push(`No-Spam C:\n${result.nospamC}`);
@@ -630,6 +647,43 @@ export function SmsGenerator() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Content groups to generate</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "standard" as const, label: "Standard", desc: "3 polished" },
+                { id: "casual" as const, label: "Casual", desc: "3 daily-text" },
+                { id: "nospam" as const, label: "No-spam", desc: "3 account-style" },
+              ]).map((g) => {
+                const on = groups.has(g.id);
+                return (
+                  <label
+                    key={g.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition-colors",
+                      on
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:border-foreground/30",
+                    )}
+                  >
+                    <Checkbox
+                      checked={on}
+                      onCheckedChange={() => toggleGroup(g.id)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="text-sm font-medium">{g.label}</div>
+                      <div className="text-xs text-muted-foreground">{g.desc}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pick fewer groups to generate faster.
+            </p>
+          </div>
+
           <Button onClick={handleGenerate} disabled={loading} className="w-full" size="lg">
             {loading ? (
               <>
@@ -697,61 +751,81 @@ export function SmsGenerator() {
               </CardContent>
             </Card>
 
-            <div className="flex items-center gap-2 pt-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Standard
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <SmsCard
-              title="Primary"
-              value={result.message}
-              shortLink={shortLink}
-              onCopy={() => copy(result.message, "Primary")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Standard A"
-              value={result.standardA}
-              shortLink={shortLink}
-              onCopy={() => copy(result.standardA, "Standard A")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Standard B"
-              value={result.standardB}
-              shortLink={shortLink}
-              onCopy={() => copy(result.standardB, "Standard B")}
-              onMarkUsed={handleMarkUsed}
-            />
+            {(result.message || result.standardA || result.standardB) && (
+              <>
+                <div className="flex items-center gap-2 pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Standard
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.message && (
+                  <SmsCard
+                    title="Primary"
+                    value={result.message}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.message!, "Primary")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.standardA && (
+                  <SmsCard
+                    title="Standard A"
+                    value={result.standardA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.standardA!, "Standard A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.standardB && (
+                  <SmsCard
+                    title="Standard B"
+                    value={result.standardB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.standardB!, "Standard B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
 
-            <div className="flex items-center gap-2 pt-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Casual / daily-text
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <SmsCard
-              title="Casual A"
-              value={result.casualA}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualA, "Casual A")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Casual B"
-              value={result.casualB}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualB, "Casual B")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Casual C"
-              value={result.casualC}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualC, "Casual C")}
-              onMarkUsed={handleMarkUsed}
-            />
+            {(result.casualA || result.casualB || result.casualC) && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Casual / daily-text
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.casualA && (
+                  <SmsCard
+                    title="Casual A"
+                    value={result.casualA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualA!, "Casual A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.casualB && (
+                  <SmsCard
+                    title="Casual B"
+                    value={result.casualB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualB!, "Casual B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.casualC && (
+                  <SmsCard
+                    title="Casual C"
+                    value={result.casualC}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualC!, "Casual C")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
 
 
 
