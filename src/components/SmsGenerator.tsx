@@ -231,6 +231,7 @@ export function SmsGenerator() {
         extraForbidden: extraForbidden.trim() || undefined,
         activeCategories: Array.from(activeCategories),
         siteId: siteId || undefined,
+        groups: Array.from(groups),
       };
 
       if (smsType === "deposit_coupon") {
@@ -307,14 +308,13 @@ export function SmsGenerator() {
 
   const allVariants = useMemo(() => {
     if (!result) return "";
-    const parts = [
-      `Standard — Primary:\n${result.message}`,
-      `Standard A:\n${result.standardA}`,
-      `Standard B:\n${result.standardB}`,
-      `Casual A:\n${result.casualA}`,
-      `Casual B:\n${result.casualB}`,
-      `Casual C:\n${result.casualC}`,
-    ];
+    const parts: string[] = [];
+    if (result.message) parts.push(`Standard — Primary:\n${result.message}`);
+    if (result.standardA) parts.push(`Standard A:\n${result.standardA}`);
+    if (result.standardB) parts.push(`Standard B:\n${result.standardB}`);
+    if (result.casualA) parts.push(`Casual A:\n${result.casualA}`);
+    if (result.casualB) parts.push(`Casual B:\n${result.casualB}`);
+    if (result.casualC) parts.push(`Casual C:\n${result.casualC}`);
     if (result.nospamA) parts.push(`No-Spam A:\n${result.nospamA}`);
     if (result.nospamB) parts.push(`No-Spam B:\n${result.nospamB}`);
     if (result.nospamC) parts.push(`No-Spam C:\n${result.nospamC}`);
