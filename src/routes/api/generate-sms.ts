@@ -33,6 +33,8 @@ const AUDIENCE_TONE: Record<Audience, string> = {
   inactive: "Gentle, low-pressure. A soft nudge to come back.",
 };
 
+type ContentGroup = "standard" | "casual" | "nospam";
+
 type SmsBody = {
   smsType: SmsType;
   offerDetails: string;
@@ -49,6 +51,7 @@ type SmsBody = {
   extraForbidden?: string;
   activeCategories: SmsSpamCategoryId[];
   siteId?: string;
+  groups?: ContentGroup[];
 };
 
 type PromptExtras = {
