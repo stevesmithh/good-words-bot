@@ -94,19 +94,38 @@ const CASUAL_FYI_OPENERS = [
   "low-key reminder",
 ];
 
-const NOSPAM_OPENERS = [
+const NOSPAM_A_OPENERS = [
   "A balance enhancement is currently available on your account.",
-  "Your profile currently qualifies for an adjusted credit allocation.",
-  "An adjusted balance update has been applied to your account.",
-  "Your account is eligible for an additional balance credit.",
   "A pending balance update is available for your review.",
+  "An account adjustment is now available for review.",
+  "A profile-level credit update is now active on your account.",
+  "A balance status update is now available on your profile.",
+  "A new account allocation is ready for review.",
+];
+
+const NOSPAM_B_OPENERS = [
+  "Your profile currently qualifies for an adjusted credit allocation.",
+  "Your account is eligible for an additional balance credit.",
   "Your account currently has an active credit reference.",
+  "Your profile is currently marked for an available account adjustment.",
+  "Your account record now reflects an available allocation update.",
+  "Your profile is currently eligible for a balance-level adjustment.",
+];
+
+const NOSPAM_C_OPENERS = [
+  "An adjusted balance update has been applied to your account.",
   "A profile adjustment has been recorded on your account.",
   "An account-level credit has been made available to you.",
-  "Your account tier currently includes an available adjustment.",
   "A new allocation reference is available on your profile.",
-  "Account review complete — an additional credit is available.",
+  "Account review complete. An additional credit is available.",
   "Your account has a pending balance enhancement awaiting use.",
+];
+
+const NOSPAM_SENTENCE_SHAPES = [
+  "single statement",
+  "statement plus brief reference clause",
+  "statement followed by a short status clause",
+  "statement plus concise action clause",
 ];
 
 const SENTENCE_SHAPES = [
@@ -248,11 +267,10 @@ export function makeStandardCasualSeed(): StandardCasualSeed {
 }
 
 export function makeNoSpamSeed(): NoSpamSeed {
-  const openers = shuffle(NOSPAM_OPENERS);
   return {
-    nospamA: { openers: [openers[0]], shape: "single statement", tone: "neutral", emoji: "no emoji" },
-    nospamB: { openers: [openers[1]], shape: "single statement", tone: "neutral", emoji: "no emoji" },
-    nospamC: { openers: [openers[2]], shape: "single statement", tone: "neutral", emoji: "no emoji" },
+    nospamA: { openers: pickN(NOSPAM_A_OPENERS, 2), shape: pick(NOSPAM_SENTENCE_SHAPES), tone: "neutral", emoji: "no emoji" },
+    nospamB: { openers: pickN(NOSPAM_B_OPENERS, 2), shape: pick(NOSPAM_SENTENCE_SHAPES), tone: "neutral", emoji: "no emoji" },
+    nospamC: { openers: pickN(NOSPAM_C_OPENERS, 2), shape: pick(NOSPAM_SENTENCE_SHAPES), tone: "neutral", emoji: "no emoji" },
   };
 }
 
@@ -274,10 +292,10 @@ Vibe word you may optionally weave into ONE variant: "${seed.vibeWord}".`;
 }
 
 export function renderNoSpamSeedBlock(seed: NoSpamSeed): string {
-  return `VARIATION SEED — each variant MUST start with its assigned opening sentence (you may continue from it):
-  · nospamA opener: "${seed.nospamA.openers[0]}"
-  · nospamB opener: "${seed.nospamB.openers[0]}"
-  · nospamC opener: "${seed.nospamC.openers[0]}"`;
+  return `VARIATION SEED — each variant MUST use one of its assigned opener options and keep its own sentence shape:
+  · nospamA openers → ${seed.nospamA.openers.map((opener) => `"${opener}"`).join(" | ")}; shape: ${seed.nospamA.shape}
+  · nospamB openers → ${seed.nospamB.openers.map((opener) => `"${opener}"`).join(" | ")}; shape: ${seed.nospamB.shape}
+  · nospamC openers → ${seed.nospamC.openers.map((opener) => `"${opener}"`).join(" | ")}; shape: ${seed.nospamC.shape}`;
 }
 
 // ───────────── Recent-texts memory ─────────────
