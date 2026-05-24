@@ -714,61 +714,81 @@ export function SmsGenerator() {
               </CardContent>
             </Card>
 
-            <div className="flex items-center gap-2 pt-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Standard
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <SmsCard
-              title="Primary"
-              value={result.message}
-              shortLink={shortLink}
-              onCopy={() => copy(result.message, "Primary")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Standard A"
-              value={result.standardA}
-              shortLink={shortLink}
-              onCopy={() => copy(result.standardA, "Standard A")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Standard B"
-              value={result.standardB}
-              shortLink={shortLink}
-              onCopy={() => copy(result.standardB, "Standard B")}
-              onMarkUsed={handleMarkUsed}
-            />
+            {(result.message || result.standardA || result.standardB) && (
+              <>
+                <div className="flex items-center gap-2 pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Standard
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.message && (
+                  <SmsCard
+                    title="Primary"
+                    value={result.message}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.message!, "Primary")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.standardA && (
+                  <SmsCard
+                    title="Standard A"
+                    value={result.standardA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.standardA!, "Standard A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.standardB && (
+                  <SmsCard
+                    title="Standard B"
+                    value={result.standardB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.standardB!, "Standard B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
 
-            <div className="flex items-center gap-2 pt-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Casual / daily-text
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <SmsCard
-              title="Casual A"
-              value={result.casualA}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualA, "Casual A")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Casual B"
-              value={result.casualB}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualB, "Casual B")}
-              onMarkUsed={handleMarkUsed}
-            />
-            <SmsCard
-              title="Casual C"
-              value={result.casualC}
-              shortLink={shortLink}
-              onCopy={() => copy(result.casualC, "Casual C")}
-              onMarkUsed={handleMarkUsed}
-            />
+            {(result.casualA || result.casualB || result.casualC) && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Casual / daily-text
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {result.casualA && (
+                  <SmsCard
+                    title="Casual A"
+                    value={result.casualA}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualA!, "Casual A")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.casualB && (
+                  <SmsCard
+                    title="Casual B"
+                    value={result.casualB}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualB!, "Casual B")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+                {result.casualC && (
+                  <SmsCard
+                    title="Casual C"
+                    value={result.casualC}
+                    shortLink={shortLink}
+                    onCopy={() => copy(result.casualC!, "Casual C")}
+                    onMarkUsed={handleMarkUsed}
+                  />
+                )}
+              </>
+            )}
 
 
 
