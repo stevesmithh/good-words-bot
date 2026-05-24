@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,14 +48,15 @@ type Audience = "new" | "active" | "inactive";
 type SmsType = "promotional" | "deposit_coupon" | "deposit_bonus" | "signup_promo";
 type LengthTarget = "short" | "standard";
 type DepositOrdinal = "1st" | "2nd" | "3rd";
+type ContentGroup = "standard" | "casual" | "nospam";
 
 type SmsResult = {
-  message: string;
-  standardA: string;
-  standardB: string;
-  casualA: string;
-  casualB: string;
-  casualC: string;
+  message?: string;
+  standardA?: string;
+  standardB?: string;
+  casualA?: string;
+  casualB?: string;
+  casualC?: string;
   nospamA?: string;
   nospamB?: string;
   nospamC?: string;
