@@ -14,7 +14,6 @@ import {
   fetchRecentTexts,
   saveRecentTexts,
   type StandardCasualSeed,
-  type NoSpamSeed,
 } from "@/server/sms-variation.server";
 
 type Audience = "new" | "active" | "inactive";
@@ -548,7 +547,6 @@ export const Route = createFileRoute("/api/generate-sms")({
 
           // Per-request creative seeds + recent-output memory (parallel fetch — only what we need)
           const stdCasualSeed: StandardCasualSeed = makeStandardCasualSeed();
-          const nospamSeed: NoSpamSeed = makeNoSpamSeed();
 
           const [recentStandard, recentCasual, recentNospam] = await Promise.all([
             needStdCasual ? fetchRecentTexts(siteId, body.smsType, "standard", 5) : Promise.resolve<string[]>([]),
@@ -563,9 +561,6 @@ export const Route = createFileRoute("/api/generate-sms")({
           ]
             .filter(Boolean)
             .join("\n\n");
-
-          const nospamSeedBlock = renderNoSpamSeedBlock(nospamSeed);
-          const nospamRecentBlock = renderRecentTextsBlock("ACCOUNT-NOTIFICATION", recentNospam);
 
           const SMS_TOOL = {
             type: "function" as const,
