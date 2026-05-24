@@ -346,16 +346,35 @@ export const Route = createFileRoute("/api/generate-sms")({
 
           const siteId = body.siteId?.trim() || null;
 
-          // Per-request creative seeds + recent-output memory (parallel fetch)
+          // Determine which content groups to generate. Default = all three.
+          const requested: ContentGroup[] = Array.isArray(body.groups) && body.groups.length > 0
+            ? (body.groups.filter((g) =>
+                g === "standard" || g === "casual" || g === "nospam",
+              ) as ContentGroup[])
+            : ["standard", "casual", "nospam"];
+          const want = {
+            standard: requested.includes("standard"),
+            casual: requested.includes("casual"),
+            nospam: requested.includes("nospam"),
+          };
+
+          // standard + casual are produced by the same AI call (SMS_TOOL).
+          const needStdCasual = want.standard || want.casual;
+          const needNospam = want.nospam;
+
+          if (!needStdCasual && !needNospam) {
+            return Response.json({ error: "Select at least one content group." }, { status: 400 });
+          }
+
+          // Per-request creative seeds + recent-output memory (parallel fetch — only what we need)
           const stdCasualSeed: StandardCasualSeed = makeStandardCasualSeed();
           const nospamSeed: NoSpamSeed = makeNoSpamSeed();
 
           const [recentStandard, recentCasual, recentNospam] = await Promise.all([
-            fetchRecentTexts(siteId, body.smsType, "standard", 5),
-            fetchRecentTexts(siteId, body.smsType, "casual", 5),
-            fetchRecentTexts(siteId, "non_spam", "nospam", 5),
+            needStdCasual ? fetchRecentTexts(siteId, body.smsType, "standard", 5) : Promise.resolve<string[]>([]),
+            needStdCasual ? fetchRecentTexts(siteId, body.smsType, "casual", 5) : Promise.resolve<string[]>([]),
+            needNospam ? fetchRecentTexts(siteId, "non_spam", "nospam", 5) : Promise.resolve<string[]>([]),
           ]);
-
 
           const stdCasualSeedBlock = renderStandardCasualSeedBlock(stdCasualSeed);
           const stdCasualRecentBlock = [
@@ -367,16 +386,6 @@ export const Route = createFileRoute("/api/generate-sms")({
 
           const nospamSeedBlock = renderNoSpamSeedBlock(nospamSeed);
           const nospamRecentBlock = renderRecentTextsBlock("ACCOUNT-NOTIFICATION", recentNospam);
-
-          const prompt = buildPrompt(body, {
-            seedBlock: stdCasualSeedBlock,
-            recentBlock: stdCasualRecentBlock,
-          });
-          const nospamPrompt = buildPrompt(
-            { ...body, smsType: "non_spam" },
-            { seedBlock: nospamSeedBlock, recentBlock: nospamRecentBlock },
-          );
-
 
           const SMS_TOOL = {
             type: "function" as const,
@@ -441,28 +450,44 @@ export const Route = createFileRoute("/api/generate-sms")({
             },
           };
 
-          // Balanced creativity: varied phrasing without hurting tool-call reliability.
-          // The helper retries automatically with lower temperature on parse failure.
           const AI_OPTS = { temperature: 0.85, top_p: 0.9 };
           const NOSPAM_AI_OPTS = { temperature: 0.55, top_p: 0.9 };
-          const [result, nospamResult] = await Promise.all([
-            callClaudeWithTool(prompt, SMS_TOOL, AI_OPTS),
-            callClaudeWithTool(nospamPrompt, NOSPAM_TOOL, NOSPAM_AI_OPTS),
-          ]);
 
-          if (!result.ok) {
+          const stdCasualPromise = needStdCasual
+            ? callClaudeWithTool(
+                buildPrompt(body, { seedBlock: stdCasualSeedBlock, recentBlock: stdCasualRecentBlock }),
+                SMS_TOOL,
+                AI_OPTS,
+              )
+            : Promise.resolve(null);
+          const nospamPromise = needNospam
+            ? callClaudeWithTool(
+                buildPrompt({ ...body, smsType: "non_spam" }, { seedBlock: nospamSeedBlock, recentBlock: nospamRecentBlock }),
+                NOSPAM_TOOL,
+                NOSPAM_AI_OPTS,
+              )
+            : Promise.resolve(null);
+
+          const [result, nospamResult] = await Promise.all([stdCasualPromise, nospamPromise]);
+
+          // If the only requested group failed, surface the error.
+          if (needStdCasual && result && !result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
               { status: result.status },
             );
           }
+          if (!needStdCasual && needNospam && nospamResult && !nospamResult.ok) {
+            return Response.json(
+              { error: nospamResult.error, ...(nospamResult.details ? { details: nospamResult.details } : {}) },
+              { status: nospamResult.status },
+            );
+          }
 
-          const merged = {
-            ...result.args,
-            ...(nospamResult.ok
-              ? nospamResult.args
-              : { nospamA: "", nospamB: "", nospamC: "" }),
-          };
+          const stdCasualArgs = result && result.ok ? result.args : {};
+          const nospamArgs = nospamResult && nospamResult.ok ? nospamResult.args : {};
+
+          const merged: Record<string, unknown> = { ...stdCasualArgs, ...nospamArgs };
 
           // Persist outputs as memory for future generations (fire-and-forget).
           const asStr = (v: unknown) => (typeof v === "string" ? v : "");
@@ -482,9 +507,9 @@ export const Route = createFileRoute("/api/generate-sms")({
             asStr(merged.nospamC),
           ].filter(Boolean);
           void Promise.all([
-            saveRecentTexts(siteId, body.smsType, "standard", standardTexts),
-            saveRecentTexts(siteId, body.smsType, "casual", casualTexts),
-            nospamResult.ok ? saveRecentTexts(siteId, "non_spam", "nospam", nospamTexts) : Promise.resolve(),
+            want.standard && standardTexts.length ? saveRecentTexts(siteId, body.smsType, "standard", standardTexts) : Promise.resolve(),
+            want.casual && casualTexts.length ? saveRecentTexts(siteId, body.smsType, "casual", casualTexts) : Promise.resolve(),
+            want.nospam && nospamResult && nospamResult.ok ? saveRecentTexts(siteId, "non_spam", "nospam", nospamTexts) : Promise.resolve(),
           ]).catch(() => {});
 
           return Response.json(merged);
