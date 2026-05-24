@@ -631,7 +631,6 @@ export const Route = createFileRoute("/api/generate-sms")({
           };
 
           const AI_OPTS = { temperature: 0.85, top_p: 0.9 };
-          const NOSPAM_AI_OPTS = { temperature: 0.55, top_p: 0.9 };
 
           const stdCasualPromise = needStdCasual
             ? callClaudeWithTool(
@@ -641,11 +640,7 @@ export const Route = createFileRoute("/api/generate-sms")({
               )
             : Promise.resolve(null);
           const nospamPromise = needNospam
-            ? callClaudeWithTool(
-                buildPrompt({ ...body, smsType: "non_spam" }, { seedBlock: nospamSeedBlock, recentBlock: nospamRecentBlock }),
-                NOSPAM_TOOL,
-                NOSPAM_AI_OPTS,
-              )
+            ? generateDistinctNoSpam(body, recentNospam, NOSPAM_TOOL)
             : Promise.resolve(null);
 
           const [result, nospamResult] = await Promise.all([stdCasualPromise, nospamPromise]);
