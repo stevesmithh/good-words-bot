@@ -99,6 +99,21 @@ export function SmsGenerator() {
   const [activeCategories, setActiveCategories] = useState<Set<SmsSpamCategoryId>>(
     () => new Set(SMS_SPAM_CATEGORIES.map((c) => c.id)),
   );
+  const [groups, setGroups] = useState<Set<ContentGroup>>(
+    () => new Set<ContentGroup>(["standard", "casual", "nospam"]),
+  );
+
+  const toggleGroup = (g: ContentGroup) => {
+    setGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(g)) {
+        if (next.size > 1) next.delete(g);
+      } else {
+        next.add(g);
+      }
+      return next;
+    });
+  };
 
   // Site / promotion / provider — driven by DB-backed catalog
   const { data: catalog } = useCatalog();
