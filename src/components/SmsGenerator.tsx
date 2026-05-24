@@ -647,6 +647,43 @@ export function SmsGenerator() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label>Content groups to generate</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "standard" as const, label: "Standard", desc: "3 polished" },
+                { id: "casual" as const, label: "Casual", desc: "3 daily-text" },
+                { id: "nospam" as const, label: "No-spam", desc: "3 account-style" },
+              ]).map((g) => {
+                const on = groups.has(g.id);
+                return (
+                  <label
+                    key={g.id}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 transition-colors",
+                      on
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:border-foreground/30",
+                    )}
+                  >
+                    <Checkbox
+                      checked={on}
+                      onCheckedChange={() => toggleGroup(g.id)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="text-sm font-medium">{g.label}</div>
+                      <div className="text-xs text-muted-foreground">{g.desc}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pick fewer groups to generate faster.
+            </p>
+          </div>
+
           <Button onClick={handleGenerate} disabled={loading} className="w-full" size="lg">
             {loading ? (
               <>
