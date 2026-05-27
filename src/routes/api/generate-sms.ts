@@ -347,20 +347,23 @@ ${valueBlock}
 LENGTH: Each message under 200 characters TOTAL including the link.
 
 VOICE — STRICT:
-- Tone: neutral, factual, third-person account-system notification.
+- Tone: neutral, factual, third-person profile-system notification.
 - Style references (register examples only — DO NOT reuse these exact openings or sentence skeletons):
-  · "A balance enhancement is currently available on your account. Apply ${codeValue || "REF40"} to continue: link"
-  · "Your account is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
+  · "A balance enhancement is currently available on your profile. Apply ${codeValue || "REF40"} to continue: link"
+  · "Your profile is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
   · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${codeValue || "REF40"} - link"
-- Allowed vocabulary: balance, account, credit, allocation, adjustment, enhancement, tier, level, reference, profile, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
+- Allowed vocabulary: balance, profile, credit, allocation, adjustment, enhancement, tier, level, reference, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
 - Capitalization: Standard sentence case. Any code value stays in its original case.
 - Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than a code value itself).
 - No brand name. No greeting ("Hi", "Hey"). No sign-off.
 
 ${linkBlock}
 
-FORBIDDEN WORDS (must not appear anywhere — these scream "promo" to carriers):
+FORBIDDEN WORDS (must not appear anywhere — these scream "promo" or "scam" to carriers):
 bonus, free, freeplay, deposit, win, winner, cash, prize, reward, gift, offer, promo, promotion, promotional, discount, sale, deal, exclusive, limited, special, hurry, last chance, expires, claim, unlock, congratulations, congrats, you won, you've won, eligible to win, lucky, jackpot, spin, play, casino, betting, wager, "$", "%", "100%", "FREE", "WIN".
+Also strictly forbidden in NON-SPAM messages (high-risk carrier flags — never use any of these, in any casing, even as part of a brand or reference): payment, withdraw, withdrawal, usd, payslip, tiktok, remote, sweepstakes, reduction, fraud, phishing, scam, scams, profitable, base, coin, coinbase, account, ssn, usbnk, job, paypal, criminal, "charles schwab", usa, dmv, "department of motor vehicles", "debit card", "santander group", "santander", "state employees", "credit union", chase, "wells fargo", bank, amazon, usps, stcu, citizen, "cltizen".
+- Replace "account" with "profile" everywhere. Do NOT use the word "account" in the message body.
+- Do NOT name any bank, financial institution, government agency, retailer, social platform, or crypto brand.
 Also forbidden: ${forbiddenList}
 
 SAFE REPLACEMENTS:
