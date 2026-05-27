@@ -347,12 +347,12 @@ ${valueBlock}
 LENGTH: Each message under 200 characters TOTAL including the link.
 
 VOICE — STRICT:
-- Tone: neutral, factual, third-person account-system notification.
+- Tone: neutral, factual, third-person profile-system notification.
 - Style references (register examples only — DO NOT reuse these exact openings or sentence skeletons):
-  · "A balance enhancement is currently available on your account. Apply ${codeValue || "REF40"} to continue: link"
-  · "Your account is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
+  · "A balance enhancement is currently available on your profile. Apply ${codeValue || "REF40"} to continue: link"
+  · "Your profile is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
   · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${codeValue || "REF40"} - link"
-- Allowed vocabulary: balance, account, credit, allocation, adjustment, enhancement, tier, level, reference, profile, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
+- Allowed vocabulary: balance, profile, credit, allocation, adjustment, enhancement, tier, level, reference, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
 - Capitalization: Standard sentence case. Any code value stays in its original case.
 - Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than a code value itself).
 - No brand name. No greeting ("Hi", "Hey"). No sign-off.
