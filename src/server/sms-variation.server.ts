@@ -95,30 +95,30 @@ const CASUAL_FYI_OPENERS = [
 ];
 
 const NOSPAM_A_OPENERS = [
-  "A balance enhancement is currently available on your account.",
+  "A balance enhancement is currently available on your profile.",
   "A pending balance update is available for your review.",
-  "An account adjustment is now available for review.",
-  "A profile-level credit update is now active on your account.",
+  "A profile adjustment is now available for review.",
+  "A profile-level credit update is now active.",
   "A balance status update is now available on your profile.",
-  "A new account allocation is ready for review.",
+  "A new profile allocation is ready for review.",
 ];
 
 const NOSPAM_B_OPENERS = [
   "Your profile currently qualifies for an adjusted credit allocation.",
-  "Your account is eligible for an additional balance credit.",
-  "Your account currently has an active credit reference.",
-  "Your profile is currently marked for an available account adjustment.",
-  "Your account record now reflects an available allocation update.",
+  "Your profile is eligible for an additional balance credit.",
+  "Your profile currently has an active credit reference.",
+  "Your profile is currently marked for an available adjustment.",
+  "Your profile record now reflects an available allocation update.",
   "Your profile is currently eligible for a balance-level adjustment.",
 ];
 
 const NOSPAM_C_OPENERS = [
-  "An adjusted balance update has been applied to your account.",
-  "A profile adjustment has been recorded on your account.",
-  "An account-level credit has been made available to you.",
+  "An adjusted balance update has been applied to your profile.",
+  "A profile adjustment has been recorded.",
+  "A profile-level credit has been made available to you.",
   "A new allocation reference is available on your profile.",
-  "Account review complete. An additional credit is available.",
-  "Your account has a pending balance enhancement awaiting use.",
+  "Profile review complete. An additional credit is available.",
+  "Your profile has a pending balance enhancement awaiting use.",
 ];
 
 const NOSPAM_SENTENCE_SHAPES = [
