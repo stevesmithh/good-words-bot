@@ -1,82 +1,70 @@
-## Goal
+# Social tab: core-idea input, custom links, short-link automation
 
-Add a third tab to the Copy Generator (alongside Email and SMS) called **Social Media**. The team enters a site/brand, promotion, target GEO, tone, and an optional free-text topic; the generator returns **3 variants per platform** for Facebook, Instagram, X, TikTok, and Telegram — each one safe under the iGaming compliance rules in the uploaded PDF, but written to feel engaging and human, not robotic.
+Three changes to `SocialGenerator` + supporting backend, plus copywriting recommendations baked into the generator.
 
-## What the team will see
+## 1. Core-idea / promotion brief box (required)
 
-A new "Social" tab in the top tab switcher. The form mirrors the SMS generator's familiar shape:
+Today the form has an optional "Topic / angle". Promote it to a **required** input renamed **"What are you promoting? Core idea & angle"**, with a longer textarea (4 rows) and a helper line: _"One or two sentences. What's the offer? Who's it for? What's the hook?"_
 
-- Site / brand selector (reuses existing `sites` + `promotions` catalog)
-- Promotion selector (reuses existing catalog)
-- Target GEO (free text, e.g. "US – NJ, PA, MI", "Canada", "Global ex-US")
-- Tone selector: Fun & playful · Informative · Community · Hype · Soft brand
-- Free-text topic / angle (optional, e.g. "weekend tournament", "new game spotlight")
-- Platform checkboxes (Facebook, Instagram, X, TikTok, Telegram) — all on by default, must keep ≥1
-- Generate button
+- Required — Generate button stays disabled until both Promotion (or custom link, see §2) AND this box are filled.
+- Sent as `topic` to `/api/generate-social` (already wired). We'll also tighten the platform prompt so the LLM treats this as the authoritative angle, not optional flavor.
 
-Output: one card per selected platform, each with **3 variants**. Every variant shows:
-- The post copy (with appropriate length/format for that platform)
-- Suggested hashtags (where the platform expects them) and an optional emoji set
-- A **risk badge** — Low / Medium / High — based on the PDF's scoring logic
-- Why it scored that way (1 short line, e.g. "Soft CTA, disclaimer present, GEO clear")
-- Copy button (and "Copy with disclaimer" where applicable)
+## 2. Link source: Ready promotion **or** Manual link
 
-## Compliance behavior (strict mode)
+Add a small segmented control above the Promotion field:
 
-Driven by `src/lib/social-compliance.ts` (new), built from the PDF:
+- **Ready promotion** (current behavior — pick from the dropdown of pre-saved promotions for the selected site).
+- **Manual link** — two inputs:
+  - **Site** — Select (reuses the site list, used purely to pick the short domain).
+  - **Destination URL** — text input, validated as a URL.
+  - Member also fills a free-text **Link label** (e.g. "Weekend tournament page"), used as the `promotionName` sent to the LLM.
 
-- **Banned / High-risk terms** are never emitted. If the model produces one, the server auto-rewrites it using the PDF's safer-alternatives table (e.g. "play now" → "explore details", "deposit now" → "check offer terms", "win big" → "explore what's available", "free money" → "welcome offer, T&Cs apply", "cash out" → "manage your session responsibly", "bonus code" → "offer details", "jackpot tonight" → "game feature spotlight"). After rewrite the variant is re-scored.
-- **Medium-risk terms** (bonus, deposit bonus, reload, jackpot, lucky, cash, payout, spin, VIP win, free credits, reward, claim) are allowed at most once per post and only when softened with a disclaimer; otherwise the model is asked to retry.
-- **Disclaimers** auto-appended where the platform allows length: `21+. T&Cs apply. Play responsibly. Available in eligible locations only.` For X (character-tight) we use a compact form: `21+ · T&Cs apply · Play responsibly`.
-- **Platform link/CTA rules** (per PDF):
-  - **TikTok**: organic-only — no direct deposit CTA, no real-money gambling link, no win promises. Variants steer toward "community update / game feature / responsible play" angles.
-  - **Telegram**: treat as organic; no urgency, no "you just won", no aggressive bonus/deposit/jackpot language. We do not emit a deposit link; a soft brand link is allowed only when the promotion permits.
-  - **X**: no affiliate codes, no betting CTAs, no promo codes. Brand update / community question / responsible-gaming reminder style.
-  - **Meta (FB / IG)**: soft CTAs only ("Explore details", "Check eligibility"). Never "play now / deposit now / claim now / win now". GEO must be explicit when the promotion is US-restricted — we surface GEO into the post (e.g. "Available in NJ, PA, MI.").
-  - **YouTube** is intentionally **not** included in v1 — the PDF requires per-country gambling certification we cannot verify here. (Easy to add later as a separate, more restricted generator.)
-- **Risk scoring** per PDF section 8:
-  - **Low**: soft copy, disclaimer present, GEO clear, safe CTA, no win claim.
-  - **Medium**: contains medium-risk vocab but disclaimer + GEO present.
-  - **High**: any banned term survives a rewrite pass, missing GEO on US iGaming, or a forbidden CTA — these variants are dropped and regenerated (up to 2 retries), and if a variant is still High it is returned with the badge clearly visible but flagged "manager review required".
+The same `siteId`/site short-domain logic is reused — no schema change to `sites` or `promotions`.
 
-## Variant diversity (reuse the SMS approach)
+## 3. Auto-create short links for social, tagged `sm`
 
-Reuse the seed/variation pattern from `src/server/sms-variation.server.ts`:
+When the form is submitted, the client (or the new server route) first resolves a short link, then sends `promotionUrl = <shortUrl>` into `/api/generate-social` so the LLM embeds the short link on platforms where links are allowed (Facebook, X, Telegram — TikTok/Instagram captions still link-free per existing compliance rules).
 
-- A new `src/server/social-variation.server.ts` with per-platform opener pools, sentence shapes, tone modifiers, emoji policies (TikTok/IG more emoji-friendly; X/Telegram restrained).
-- Recent-output memory in a new `recent_social_outputs` table keyed by `(site_id, platform, tone)` so the next generation is told NOT to mirror the last ones — same Dice-coefficient near-duplicate guard already used for no-spam SMS.
+Implementation:
 
-## Architecture
+- **Extend `sms_short_links` with a `channel text not null default 'sms'` column** (migration). Reuse the table to avoid a parallel schema; rows for social use `channel = 'social'` and `utm_medium = 'social'`.
+- **Add `/api/social-shortlink`** (new TanStack server route, mirrors `/api/shortio` but for social):
+  - Inputs: either `{ promotionId }` (ready) or `{ siteId, destinationUrl, label }` (manual).
+  - Builds `utm_source = <platform-or-"social">`, `utm_medium = 'social'`, `utm_campaign = <random slug>`.
+  - Calls short.io with `tags: ["sm"]` (was `["sms"]` for SMS).
+  - For ready promotions: reuses unused rows scoped by `channel='social'` + current short_domain (same reuse logic as SMS).
+  - For manual links: always creates a fresh short link (no reuse — destination is arbitrary per submission) and stores it with `promotion_id = NULL` (requires loosening that column to nullable in the migration) plus a new nullable `manual_label text` column for traceability.
+- **`SocialGenerator`** calls `/api/social-shortlink` before `/api/generate-social`, then injects the returned short URL as `promotionUrl`. One short link per generation submission — same link reused across the platforms in that submission.
 
-- **Frontend**
-  - `src/components/SocialGenerator.tsx` — form + result cards (mirrors `SmsGenerator.tsx`).
-  - `src/routes/index.tsx` — add third tab "Social" with an icon.
-- **Server**
-  - `src/routes/api/generate-social.ts` — TanStack server route. Validates input with zod, fans out per selected platform in parallel, runs the rewrite + rescore loop, persists recent outputs.
-  - `src/server/social-variation.server.ts` — seeds, opener pools, prompt blocks.
-  - `src/lib/social-compliance.ts` — banned/medium lists, safer-alternative map, disclaimer templates, per-platform policy + risk scorer (shared client/server so the UI can re-score on edits later).
-  - `src/server/anthropic.server.ts` — reused as-is (Gemini Flash via Lovable AI Gateway), with a per-platform tool schema so the model returns structured `{ copy, hashtags, emojis }` per variant.
-- **Database** (one new migration)
-  - `recent_social_outputs(id, site_id, platform, tone, text, created_at)` — same shape and RLS posture as `recent_sms_outputs` (no public access; server uses service role).
+Per-platform link policy already enforced in `social-compliance.ts` (`allowLink`) stays the rule of truth: Instagram still says "link in bio", TikTok still strips URLs.
 
-## Performance
+## 4. Copywriting recommendations (in-product)
 
-- Target ≤ 60 s end-to-end with all 5 platforms selected.
-- Run the 5 platform calls in parallel; each platform is a single model call returning all 3 variants in one tool call (same pattern as SMS).
-- The rewrite/rescore pass runs server-side without an extra model call when fixes are mechanical (token swap). Only retry the model if a variant still scores High after rewrite.
+Surface them as a small **"Tips for higher-converting safe posts"** collapsible under the form, plus bake them into the system prompt so the LLM follows them by default:
 
-## Out of scope for v1
+- Lead with curiosity, not the offer. ("Something new just landed for weekend players." > "Get bonus now.")
+- One concrete detail beats five vague ones — name the game, the tournament, the date.
+- Pose a question in the first line on FB/IG to lift comment rate.
+- On X, write like a person, not a brand — lowercase, short, one idea.
+- On Telegram, lead with the value, end with the link, no emoji wall.
+- On TikTok captions, treat copy as a hook for the video — under 150 chars, no link, no urgency.
+- Mention GEO naturally ("Live in NJ / PA / MI") not as a disclaimer dump.
+- Always end with the platform-appropriate responsible-play line (already auto-appended).
 
-- YouTube, LinkedIn, Reddit, Threads (deferred — YouTube specifically blocked by the PDF's certification requirement).
-- Direct posting to the platforms (we only generate copy; team posts manually).
-- Image / video generation.
-- Hashtag research from external APIs (we use a curated, compliance-safe pool per platform).
+## Technical summary
 
-## Acceptance checks
+**Files to edit / create**
+- `supabase/migrations/<ts>_social_short_links.sql` — add `channel`, `manual_label` columns; loosen `promotion_id` to nullable; backfill `channel='sms'`; keep RLS as-is.
+- `src/routes/api/social-shortlink.ts` (new) — handles ready + manual modes, calls short.io with `tags: ["sm"]`.
+- `src/routeTree.gen.ts` — auto-regenerated.
+- `src/components/SocialGenerator.tsx` — link-source toggle, manual-link inputs, required core-idea box, tips accordion, shortlink fetch step.
+- `src/routes/api/generate-social.ts` — accept `promotionUrl` as-is (already does), tighten prompt to treat `topic` as required core idea; add the copywriting tips to the system prompt.
 
-1. Banned phrase test: ask for a "play now" CTA — output never contains "play now / deposit now / claim now / win now / win big / free money / bonus code / jackpot tonight" etc.
-2. GEO test: with promotion marked US-only and GEO left blank, Meta variants are rejected as High until GEO is added.
-3. TikTok test: TikTok variants never include a deposit link or "claim bonus".
-4. Telegram test: no urgency words ("now", "hurry", "last chance", "you just won").
-5. Repeat test: generating twice in a row for the same site/platform produces meaningfully different openers (Dice < 0.86 vs. last 5).
-6. Speed test: 5 platforms × 3 variants returns in under 60 s.
+**Out of scope**
+- Editing pre-saved promotions (still done via Admin).
+- Per-platform unique short links (single short link reused across platforms per submission — keeps short.io usage and tracking simple).
+- Changing SMS behavior — `/api/shortio` and its `tags: ["sms"]` stay untouched.
+
+## Open question
+
+For **manual links**, should we keep the rule that a manual destination URL must live on the selected site's domain (safer — prevents using the short domain for arbitrary third-party URLs), or allow any URL? Default in this plan: **allow any URL**, since the use case is "team member has a landing page not yet in the catalog". Tell me if you want it restricted.
