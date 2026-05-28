@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSocialShortlinkRouteImport } from './routes/api/social-shortlink'
 import { Route as ApiShortioRouteImport } from './routes/api/shortio'
 import { Route as ApiGenerateSocialRouteImport } from './routes/api/generate-social'
 import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
@@ -20,6 +21,11 @@ import { Route as ApiAdminRouteImport } from './routes/api/admin'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialShortlinkRoute = ApiSocialShortlinkRouteImport.update({
+  id: '/api/social-shortlink',
+  path: '/api/social-shortlink',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiShortioRoute = ApiShortioRouteImport.update({
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
   '/api/shortio': typeof ApiShortioRoute
+  '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
   '/api/shortio': typeof ApiShortioRoute
+  '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
   '/api/shortio': typeof ApiShortioRoute
+  '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/api/generate-sms'
     | '/api/generate-social'
     | '/api/shortio'
+    | '/api/social-shortlink'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/api/generate-sms'
     | '/api/generate-social'
     | '/api/shortio'
+    | '/api/social-shortlink'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/api/generate-sms'
     | '/api/generate-social'
     | '/api/shortio'
+    | '/api/social-shortlink'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
   ApiGenerateSocialRoute: typeof ApiGenerateSocialRoute
   ApiShortioRoute: typeof ApiShortioRoute
+  ApiSocialShortlinkRoute: typeof ApiSocialShortlinkRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social-shortlink': {
+      id: '/api/social-shortlink'
+      path: '/api/social-shortlink'
+      fullPath: '/api/social-shortlink'
+      preLoaderRoute: typeof ApiSocialShortlinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/shortio': {
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateSmsRoute: ApiGenerateSmsRoute,
   ApiGenerateSocialRoute: ApiGenerateSocialRoute,
   ApiShortioRoute: ApiShortioRoute,
+  ApiSocialShortlinkRoute: ApiSocialShortlinkRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

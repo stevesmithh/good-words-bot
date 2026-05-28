@@ -9,6 +9,8 @@ import {
   Shield,
   Sparkles,
   Share2,
+  Lightbulb,
+  Link2,
 } from "lucide-react";
 import {
   Card,
@@ -30,6 +32,12 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import {
   PLATFORM_POLICIES,
@@ -56,6 +64,8 @@ type PlatformOut = {
   error?: string;
 };
 
+type LinkMode = "ready" | "manual";
+
 const DEFAULT_PLATFORMS = new Set<SocialPlatform>(
   SOCIAL_PLATFORMS.map((p) => p.id),
 );
@@ -66,10 +76,13 @@ export function SocialGenerator() {
   const PROMOTIONS = catalog?.promotions ?? [];
 
   const [siteId, setSiteId] = useState("");
+  const [linkMode, setLinkMode] = useState<LinkMode>("ready");
   const [promotionId, setPromotionId] = useState("");
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualLabel, setManualLabel] = useState("");
   const [geo, setGeo] = useState("");
   const [tone, setTone] = useState<SocialTone>("fun");
-  const [topic, setTopic] = useState("");
+  const [coreIdea, setCoreIdea] = useState("");
   const [isUsIgaming, setIsUsIgaming] = useState(true);
   const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(
     () => new Set(DEFAULT_PLATFORMS),
@@ -78,6 +91,7 @@ export function SocialGenerator() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [results, setResults] = useState<PlatformOut[] | null>(null);
+  const [usedShortUrl, setUsedShortUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!siteId && SITES.length > 0) setSiteId(SITES[0].id);
@@ -111,17 +125,55 @@ export function SocialGenerator() {
     });
   };
 
+  const linkReady =
+    linkMode === "ready"
+      ? !!promotionId
+      : !!siteId && !!manualUrl.trim() && !!manualLabel.trim();
+  const canGenerate = linkReady && coreIdea.trim().length >= 5 && !loading;
+
   const handleGenerate = async () => {
     setErrorMsg(null);
     setResults(null);
+    setUsedShortUrl(null);
     setLoading(true);
     try {
+      // 1. Resolve short link via /api/social-shortlink
+      const shortBody =
+        linkMode === "ready"
+          ? { action: "ready" as const, promotionId }
+          : {
+              action: "manual" as const,
+              siteId,
+              destinationUrl: manualUrl.trim(),
+              label: manualLabel.trim(),
+            };
+      const shortResp = await fetch("/api/social-shortlink", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(shortBody),
+      });
+      const shortData = await shortResp.json().catch(() => ({}));
+      if (!shortResp.ok) {
+        const msg = (shortData?.error as string) || `Short link failed (${shortResp.status})`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
+      const shortUrl = shortData.shortUrl as string;
+      setUsedShortUrl(shortUrl);
+
+      const promotionName =
+        linkMode === "ready"
+          ? selectedPromotion?.name
+          : manualLabel.trim();
+
+      // 2. Generate posts
       const payload = {
         siteId: siteId || undefined,
         brandName: siteId || undefined,
-        promotionName: selectedPromotion?.name,
-        promotionUrl: selectedPromotion?.destination_url,
-        topic: topic.trim() || undefined,
+        promotionName,
+        promotionUrl: shortUrl,
+        topic: coreIdea.trim(),
         geo: geo.trim() || undefined,
         isUsIgaming,
         tone,
@@ -142,7 +194,7 @@ export function SocialGenerator() {
       }
       setResults((data.platforms ?? []) as PlatformOut[]);
       toast.success("Social posts generated");
-      void logGeneration("sms"); // reuses existing usage logger
+      void logGeneration("sms");
     } catch (err) {
       const m = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(m);
@@ -202,20 +254,98 @@ export function SocialGenerator() {
                 </Select>
               </div>
             </div>
+
+            {/* Link source */}
             <div className="space-y-2">
-              <Label htmlFor="s-promo">Promotion *</Label>
-              <Select value={promotionId} onValueChange={setPromotionId}>
-                <SelectTrigger id="s-promo"><SelectValue placeholder="Pick a promotion" /></SelectTrigger>
-                <SelectContent className="max-h-[320px]">
-                  {sitePromotions.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedPromotion && (
-                <p className="truncate text-xs text-muted-foreground">→ {selectedPromotion.destination_url}</p>
-              )}
+              <Label>Link source</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLinkMode("ready")}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                    linkMode === "ready"
+                      ? "border-primary bg-primary/5 font-medium"
+                      : "border-border bg-background text-muted-foreground hover:border-foreground/30",
+                  )}
+                  aria-pressed={linkMode === "ready"}
+                >
+                  Ready promotion
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkMode("manual")}
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                    linkMode === "manual"
+                      ? "border-primary bg-primary/5 font-medium"
+                      : "border-border bg-background text-muted-foreground hover:border-foreground/30",
+                  )}
+                  aria-pressed={linkMode === "manual"}
+                >
+                  Manual link
+                </button>
+              </div>
             </div>
+
+            {linkMode === "ready" ? (
+              <div className="space-y-2">
+                <Label htmlFor="s-promo">Promotion *</Label>
+                <Select value={promotionId} onValueChange={setPromotionId}>
+                  <SelectTrigger id="s-promo"><SelectValue placeholder="Pick a promotion" /></SelectTrigger>
+                  <SelectContent className="max-h-[320px]">
+                    {sitePromotions.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPromotion && (
+                  <p className="truncate text-xs text-muted-foreground">→ {selectedPromotion.destination_url}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="s-manual-label">Link label *</Label>
+                  <Input
+                    id="s-manual-label"
+                    value={manualLabel}
+                    onChange={(e) => setManualLabel(e.target.value)}
+                    placeholder="e.g. Weekend tournament landing page"
+                    maxLength={200}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="s-manual-url">Destination URL *</Label>
+                  <Input
+                    id="s-manual-url"
+                    type="url"
+                    value={manualUrl}
+                    onChange={(e) => setManualUrl(e.target.value)}
+                    placeholder="https://example.com/landing"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A short link will be auto-created on the selected site's domain and tagged <code className="font-mono">sm</code>.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Core idea — required */}
+          <div className="space-y-2">
+            <Label htmlFor="s-idea">What are you promoting? Core idea & angle *</Label>
+            <Textarea
+              id="s-idea"
+              value={coreIdea}
+              onChange={(e) => setCoreIdea(e.target.value)}
+              placeholder="One or two sentences. What's the offer? Who's it for? What's the hook?"
+              rows={4}
+              maxLength={1000}
+            />
+            <p className="text-xs text-muted-foreground">
+              This is the brief — every variant will be built around it.
+            </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -228,7 +358,7 @@ export function SocialGenerator() {
                 placeholder="e.g. US – NJ, PA, MI"
               />
               <p className="text-xs text-muted-foreground">
-                Required for US iGaming on Meta. Surfaced into the post text.
+                Required for US iGaming on Meta. Mentioned naturally in the post.
               </p>
             </div>
             <div className="space-y-2">
@@ -246,17 +376,6 @@ export function SocialGenerator() {
                 </span>
               </label>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="s-topic">Topic / angle (optional)</Label>
-            <Textarea
-              id="s-topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. weekend tournament, new game feature spotlight"
-              rows={2}
-            />
           </div>
 
           <div className="space-y-2">
@@ -286,7 +405,7 @@ export function SocialGenerator() {
 
           <Button
             onClick={handleGenerate}
-            disabled={loading || !promotionId}
+            disabled={!canGenerate}
             className="w-full"
             size="lg"
           >
@@ -296,6 +415,29 @@ export function SocialGenerator() {
               <><Sparkles className="h-4 w-4" /> Generate posts</>
             )}
           </Button>
+
+          <Accordion type="single" collapsible>
+            <AccordionItem value="tips" className="border-0">
+              <AccordionTrigger className="rounded-md bg-muted/40 px-3 py-2 text-sm hover:no-underline">
+                <span className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                  Tips for higher-converting safe posts
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pt-3 text-sm text-muted-foreground">
+                <ul className="list-disc space-y-1.5 pl-4">
+                  <li>Lead with curiosity, not the offer. A hook beats a hard sell.</li>
+                  <li>One concrete detail beats five vague ones — name the game, the day, the feature.</li>
+                  <li><strong>Facebook / Instagram:</strong> open with a question to invite comments.</li>
+                  <li><strong>X:</strong> write like a person, not a brand — lowercase, short, one idea.</li>
+                  <li><strong>Telegram:</strong> lead with the value, end with the link, no emoji wall.</li>
+                  <li><strong>TikTok:</strong> caption is a hook for the video — short, no link, no urgency.</li>
+                  <li>Mention GEO naturally inside a sentence, not as a tacked-on disclaimer dump.</li>
+                  <li>Responsible-play disclaimer is auto-appended per platform — don't repeat it manually.</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
 
@@ -306,6 +448,31 @@ export function SocialGenerator() {
             <CardContent className="flex items-start gap-2 pt-6 text-destructive">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p className="text-sm font-medium">{errorMsg}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {usedShortUrl && !errorMsg && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="flex items-center gap-2 py-3 text-sm">
+              <Link2 className="h-4 w-4 text-primary" />
+              <span className="font-medium">Short link:</span>
+              <a
+                href={usedShortUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate font-mono text-primary underline-offset-2 hover:underline"
+              >
+                {usedShortUrl}
+              </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copy(usedShortUrl, "Short link")}
+                className="ml-auto h-7 px-2"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -442,7 +609,7 @@ function SocialEmptyState() {
         </div>
         <p className="text-sm font-medium">Your social posts will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick a site, promotion, GEO, and tone. We generate 3 compliance-safe variants per platform.
+          Pick a site, link, GEO, tone, and write the core idea. We generate 3 compliance-safe variants per platform.
         </p>
       </CardContent>
     </Card>

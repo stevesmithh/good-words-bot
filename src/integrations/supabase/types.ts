@@ -180,10 +180,12 @@ export type Database = {
       }
       sms_short_links: {
         Row: {
+          channel: string
           created_at: string
           destination_url: string
           id: string
-          promotion_id: string
+          manual_label: string | null
+          promotion_id: string | null
           provider: string
           short_domain: string
           short_url: string
@@ -191,10 +193,12 @@ export type Database = {
           used_at: string | null
         }
         Insert: {
+          channel?: string
           created_at?: string
           destination_url: string
           id?: string
-          promotion_id: string
+          manual_label?: string | null
+          promotion_id?: string | null
           provider: string
           short_domain: string
           short_url: string
@@ -202,10 +206,12 @@ export type Database = {
           used_at?: string | null
         }
         Update: {
+          channel?: string
           created_at?: string
           destination_url?: string
           id?: string
-          promotion_id?: string
+          manual_label?: string | null
+          promotion_id?: string | null
           provider?: string
           short_domain?: string
           short_url?: string
