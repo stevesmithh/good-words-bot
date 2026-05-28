@@ -78,7 +78,7 @@ function buildPlatformPrompt(
 
 BRAND: ${brand}
 PROMOTION: ${promo}
-TOPIC / ANGLE: ${topic}
+CORE IDEA / ANGLE (authoritative — this is the brief; every variant must clearly reflect it): ${topic}
 TARGET GEO: ${geo}
 TONE: ${body.tone}
 
@@ -107,11 +107,12 @@ SAFER ALTERNATIVES — prefer these phrasings:
 - "bonus code" → "offer details"
 - "jackpot tonight" → "game feature spotlight"
 
-VOICE:
-- Engaging, fun, attention-grabbing — but ZERO spam vibes.
-- Sound like a real social manager, not a marketing bot.
-- Curiosity hook > hard sell. Tease the value.
-- No ALL CAPS shouting. No "!!!".
+COPYWRITING PLAYBOOK (apply to every variant):
+- Lead with curiosity, not the offer. A hook beats a hard sell.
+- One concrete detail beats five vague ones — name the game, the day, the feature.
+- ${platform === "facebook" || platform === "instagram" ? "Open with a short question to invite comments." : platform === "x" ? "Write like a person, not a brand — lowercase, short, one idea." : platform === "telegram" ? "Lead with the value, end with the link, no emoji wall." : "Caption is a hook for the video — short, no link, no urgency words."}
+- Mention the GEO naturally inside a sentence — not as a tacked-on disclaimer dump.
+- No ALL CAPS shouting. No "!!!". No marketing-bot energy.
 ${policy.emojiPolicy === "rich" ? "- Emoji are welcome (1–3 per post) where they fit naturally." : ""}
 ${policy.emojiPolicy === "light" ? "- One emoji max per post if it fits naturally." : ""}
 ${policy.emojiPolicy === "minimal" ? "- Avoid emoji unless absolutely natural; one max." : ""}
