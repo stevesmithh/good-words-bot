@@ -73,9 +73,13 @@ function Index() {
             <MessageSquare className="h-4 w-4" />
             SMS
           </TabButton>
+          <TabButton active={tab === "social"} onClick={() => setTab("social")}>
+            <Share2 className="h-4 w-4" />
+            Social
+          </TabButton>
         </div>
 
-        {tab === "email" ? <EmailGenerator /> : <SmsGenerator />}
+        {tab === "email" ? <EmailGenerator /> : tab === "sms" ? <SmsGenerator /> : <SocialGenerator />}
       </main>
     </div>
   );
