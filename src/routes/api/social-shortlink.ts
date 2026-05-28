@@ -118,7 +118,6 @@ export const Route = createFileRoute("/api/social-shortlink")({
             const destinationUrl = promo.destination_url as string;
             const promoId = promo.id as string;
 
-            // Reuse an unused social link for this promotion + domain if any
             const { data: existing, error: lookupErr } = await supabase
               .from("sms_short_links")
               .select("id, short_url, destination_url")
@@ -157,4 +156,95 @@ export const Route = createFileRoute("/api/social-shortlink")({
               .insert({
                 promotion_id: promoId,
                 provider: "social",
-                channel: CHANNEL
+                channel: CHANNEL,
+                destination_url: utmUrl,
+                short_url: created.shortUrl,
+                shortio_id: created.shortioId,
+                short_domain: shortDomain,
+              })
+              .select("id")
+              .single();
+            if (insertErr || !inserted) {
+              console.error("[social-shortlink] insert error:", insertErr);
+              return Response.json({ error: "Failed to save link" }, { status: 500 });
+            }
+            return Response.json({
+              linkId: inserted.id as string,
+              shortUrl: created.shortUrl,
+              destinationUrl: utmUrl,
+              isReused: false,
+            });
+          }
+
+          if (body.action === "manual") {
+            if (!body.siteId || !body.destinationUrl) {
+              return Response.json({ error: "siteId and destinationUrl are required" }, { status: 400 });
+            }
+            if (body.destinationUrl.length > 2000) {
+              return Response.json({ error: "destinationUrl too long" }, { status: 400 });
+            }
+            try {
+              new URL(body.destinationUrl);
+            } catch {
+              return Response.json({ error: "destinationUrl must be a valid URL" }, { status: 400 });
+            }
+
+            const { data: site, error: siteErr } = await supabase
+              .from("sites")
+              .select("id, short_domain")
+              .eq("id", body.siteId)
+              .maybeSingle();
+            if (siteErr) {
+              console.error("[social-shortlink] site lookup error:", siteErr);
+              return Response.json({ error: "Database operation failed" }, { status: 500 });
+            }
+            if (!site || !site.short_domain) {
+              return Response.json({ error: "Site has no short domain configured" }, { status: 500 });
+            }
+            const shortDomain = site.short_domain as string;
+
+            const slug = randomSlug();
+            const utmUrl = buildUtmUrl(body.destinationUrl, slug);
+            let created;
+            try {
+              created = await createShortioLink({ apiKey, domain: shortDomain, destinationUrl: utmUrl });
+            } catch (err) {
+              console.error("[social-shortlink] short.io error:", err);
+              return Response.json({ error: "Failed to create short link" }, { status: 502 });
+            }
+
+            const { data: inserted, error: insertErr } = await supabase
+              .from("sms_short_links")
+              .insert({
+                promotion_id: null,
+                provider: "social",
+                channel: CHANNEL,
+                destination_url: utmUrl,
+                short_url: created.shortUrl,
+                shortio_id: created.shortioId,
+                short_domain: shortDomain,
+                manual_label: body.label?.slice(0, 200) ?? null,
+              })
+              .select("id")
+              .single();
+            if (insertErr || !inserted) {
+              console.error("[social-shortlink] insert error:", insertErr);
+              return Response.json({ error: "Failed to save link" }, { status: 500 });
+            }
+            return Response.json({
+              linkId: inserted.id as string,
+              shortUrl: created.shortUrl,
+              destinationUrl: utmUrl,
+              isReused: false,
+            });
+          }
+
+          return Response.json({ error: "Unknown action" }, { status: 400 });
+        } catch (err) {
+          console.error("[social-shortlink] handler error:", err);
+          return Response.json({ error: "Server error" }, { status: 500 });
+        }
+      },
+    },
+  },
+});
