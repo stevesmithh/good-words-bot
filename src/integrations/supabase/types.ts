@@ -103,6 +103,33 @@ export type Database = {
         }
         Relationships: []
       }
+      recent_social_outputs: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          site_id: string | null
+          text: string
+          tone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          site_id?: string | null
+          text: string
+          tone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          site_id?: string | null
+          text?: string
+          tone?: string
+        }
+        Relationships: []
+      }
       sites: {
         Row: {
           created_at: string

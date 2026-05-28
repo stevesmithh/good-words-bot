@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare, LogOut } from "lucide-react";
+import { Mail, MessageSquare, LogOut, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
+import { SocialGenerator } from "@/components/SocialGenerator";
 import { AdminButton } from "@/components/AdminEditor";
 import { Button } from "@/components/ui/button";
 import { clearSession, getSession } from "@/lib/session";
 
-type Tab = "email" | "sms";
+type Tab = "email" | "sms" | "social";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -72,9 +73,13 @@ function Index() {
             <MessageSquare className="h-4 w-4" />
             SMS
           </TabButton>
+          <TabButton active={tab === "social"} onClick={() => setTab("social")}>
+            <Share2 className="h-4 w-4" />
+            Social
+          </TabButton>
         </div>
 
-        {tab === "email" ? <EmailGenerator /> : <SmsGenerator />}
+        {tab === "email" ? <EmailGenerator /> : tab === "sms" ? <SmsGenerator /> : <SocialGenerator />}
       </main>
     </div>
   );
