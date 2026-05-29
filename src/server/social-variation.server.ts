@@ -69,11 +69,9 @@ const SHAPES = [
 ];
 
 const TONE_HINTS: Record<SocialTone, string> = {
-  fun: "playful, light, a little witty — never spammy",
-  informative: "clear, factual, brand-voice; reads like a brief update",
-  community: "conversational, ask a question, invite reply",
-  hype: "energetic but RESTRAINED — no urgency words, no win promises",
-  soft: "minimal, brand-update voice, almost editorial",
+  promotional: "high-energy, short punchy sentences, controlled — never spammy",
+  friendly: "warm, conversational, second-person 'you', soft invitations",
+  informational: "neutral, factual, brand-update voice, no emoji, no claims",
 };
 
 function pick<T>(arr: readonly T[]): T {
