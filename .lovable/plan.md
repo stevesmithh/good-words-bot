@@ -1,70 +1,78 @@
-# Social tab: core-idea input, custom links, short-link automation
+# Social Copy Generator — Refinement Plan
 
-Three changes to `SocialGenerator` + supporting backend, plus copywriting recommendations baked into the generator.
+Applies the 6 issues raised by the SM managers. All changes are scoped to the Social generator (SMS / Email flows untouched).
 
-## 1. Core-idea / promotion brief box (required)
+## 1. Tone enforcement (Issue 1)
 
-Today the form has an optional "Topic / angle". Promote it to a **required** input renamed **"What are you promoting? Core idea & angle"**, with a longer textarea (4 rows) and a helper line: _"One or two sentences. What's the offer? Who's it for? What's the hook?"_
+- In `src/lib/social-compliance.ts`, replace the current `SOCIAL_TONES` flat list with a per-tone **rulebook**: each tone gets a `label`, `desc`, and a `rules: string[]` block matching the spec (Promotional / Friendly / Informational behaviors — sentence rhythm, emoji policy, banned filler, etc.).
+- In `src/routes/api/generate-social.ts`, inject the selected tone's full rulebook into the prompt as its own `TONE RULES` section, and add the "re-read before returning" self-check from the spec.
+- Update the tone selector in `src/components/SocialGenerator.tsx` to surface the new tone labels/descriptions (Promotional / Friendly / Informational become the canonical three; existing tones map to them).
 
-- Required — Generate button stays disabled until both Promotion (or custom link, see §2) AND this box are filled.
-- Sent as `topic` to `/api/generate-social` (already wired). We'll also tighten the platform prompt so the LLM treats this as the authoritative angle, not optional flavor.
+## 2. GEO discipline (Issue 2)
 
-## 2. Link source: Ready promotion **or** Manual link
+- In the prompt builder, replace the current "post MUST reference the GEO" instruction with the spec's **GEO RULE**: no country/region names in body copy; eligibility only as the disclaimer line `Available in eligible locations only.`
+- Remove the `detectGeoInText` requirement from the scorer's success path — GEO presence in body is no longer a positive signal; missing-GEO is no longer flagged as a reason.
+- Keep `geo` as targeting metadata only (used for routing/log context, not copy content).
 
-Add a small segmented control above the Promotion field:
+## 3. Novelty / timing block (Issue 3)
 
-- **Ready promotion** (current behavior — pick from the dropdown of pre-saved promotions for the selected site).
-- **Manual link** — two inputs:
-  - **Site** — Select (reuses the site list, used purely to pick the short domain).
-  - **Destination URL** — text input, validated as a URL.
-  - Member also fills a free-text **Link label** (e.g. "Weekend tournament page"), used as the `promotionName` sent to the LLM.
+- Add a `NOVELTY_TERMS` list to `social-compliance.ts` ("just launched", "now live", "introducing", "brand new", "for the first time", "dropping now", "this week only", "don't miss this", "limited time", "act fast", plus "new promotion").
+- In the prompt, add the **NOVELTY / TIMING RULE** block. The model may only use novelty language if the user's Core Idea text contains an allow-list trigger word (`new`, `launching`, `just released`, `limited time`, `first time`, `announcing`) — computed server-side and passed into the prompt as `NOVELTY_ALLOWED: true|false`.
+- Add post-generation screening: if `NOVELTY_ALLOWED` is false and any novelty term appears in output, mark variant as needing regeneration (see Issue 4 loop).
 
-The same `siteId`/site short-domain logic is reused — no schema change to `sites` or `promotions`.
+## 4. Hard compliance blocking (Issue 4)
 
-## 3. Auto-create short links for social, tagged `sm`
+Two-layer enforcement, replacing today's "auto-rewrite and move on" behavior:
 
-When the form is submitted, the client (or the new server route) first resolves a short link, then sends `promotionUrl = <shortUrl>` into `/api/generate-social` so the LLM embeds the short link on platforms where links are allowed (Facebook, X, Telegram — TikTok/Instagram captions still link-free per existing compliance rules).
+**Layer 1 — input pre-screen (client + server):**
+- Add `HARD_BLOCK_INPUT_TERMS` to `social-compliance.ts` (guaranteed win/earn, instant payout/withdrawal, risk-free, free money, no risk, you will win, certain to win, 100% win, always pays out, etc.).
+- In `SocialGenerator.tsx`, scan the Core Idea + Promotion fields on change. If a hit is found, show an inline red banner listing the term and its safer alternative, and **disable** the Generate button until the user edits the text. Server re-validates and rejects with 400 if bypassed.
 
-Implementation:
+**Layer 2 — output hard-block + regenerate:**
+- Add `HARD_BLOCK_OUTPUT_PATTERNS` (regexes for `guaranteed (win|earn|reward|return|payout)`, `risk[- ]?free`, `instant (payout|withdrawal|cash|win)`, `free money`, `no risk`).
+- After the model returns, run these regexes. If a variant hits, do **not** auto-rewrite — discard it and call the model again with an appended instruction `The previous output contained a blocked compliance term: "<term>". Do not use it or any semantic equivalent.` Up to 2 retries; if it still fails, return the variant marked `blocked: true` with no copy shown (UI renders a "Could not produce compliant copy — refine your brief" card).
+- Keep `autoRewriteHighRisk` only for the lower-risk medium-vocab list, not for the hard-block list.
 
-- **Extend `sms_short_links` with a `channel text not null default 'sms'` column** (migration). Reuse the table to avoid a parallel schema; rows for social use `channel = 'social'` and `utm_medium = 'social'`.
-- **Add `/api/social-shortlink`** (new TanStack server route, mirrors `/api/shortio` but for social):
-  - Inputs: either `{ promotionId }` (ready) or `{ siteId, destinationUrl, label }` (manual).
-  - Builds `utm_source = <platform-or-"social">`, `utm_medium = 'social'`, `utm_campaign = <random slug>`.
-  - Calls short.io with `tags: ["sm"]` (was `["sms"]` for SMS).
-  - For ready promotions: reuses unused rows scoped by `channel='social'` + current short_domain (same reuse logic as SMS).
-  - For manual links: always creates a fresh short link (no reuse — destination is arbitrary per submission) and stores it with `promotion_id = NULL` (requires loosening that column to nullable in the migration) plus a new nullable `manual_label text` column for traceability.
-- **`SocialGenerator`** calls `/api/social-shortlink` before `/api/generate-social`, then injects the returned short URL as `promotionUrl`. One short link per generation submission — same link reused across the platforms in that submission.
+## 5. Anti-fabrication (Issue 5)
 
-Per-platform link policy already enforced in `social-compliance.ts` (`allowLink`) stays the rule of truth: Instagram still says "link in bio", TikTok still strips URLs.
+- Add explicit, structured inputs to `SocialGenerator.tsx`:
+  - `offerName` (text, optional)
+  - `offerAmount` (text, optional — e.g. "$20 credit", "100 free spins")
+  - `promoCode` (text, optional)
+  - `gameTitles` (text, optional)
+- Pass each as either the literal value or the sentinel string `NOT PROVIDED — do not include` into the prompt under a `BRIEF FACTS` block.
+- Add the spec's **FABRICATION RULE** block to the prompt, plus a tool-call field `details_used: string[]` the model must populate listing every concrete fact it referenced.
+- Server validates: any token in `details_used` that isn't in the supplied facts fails the variant (regenerate). Any `$`, `%`, or all-caps code-shaped token (`/[A-Z0-9]{4,}/`) in the output that isn't in the supplied facts also fails.
 
-## 4. Copywriting recommendations (in-product)
+## 6. Explainable compliance audit (Issue 6)
 
-Surface them as a small **"Tips for higher-converting safe posts"** collapsible under the form, plus bake them into the system prompt so the LLM follows them by default:
+- Extend the Claude tool schema so each variant returns:
+  ```
+  copy, hashtags,
+  compliance_audit: [{ original_term, replacement, reason, risk_level, rule_reference }],
+  overall_risk_score: "Low"|"Medium"|"High",
+  risk_score_reason: string,
+  missing_elements: string[]
+  ```
+- Merge the model's audit with the server's own findings (hard-block hits, fabrication catches, novelty catches) so the audit is authoritative, not just the model's self-report.
+- In `SocialGenerator.tsx`, render a collapsible **Compliance Report** beneath each variant:
+  - Risk badge (green/yellow/red) using existing tokens.
+  - Audit cards: `original_term` in destructive color → `replacement` in success color → `reason` in muted text → risk badge.
+  - `missing_elements` rendered as warning chips; copying to clipboard is gated behind an "Acknowledge warnings" checkbox when any chip is present.
 
-- Lead with curiosity, not the offer. ("Something new just landed for weekend players." > "Get bonus now.")
-- One concrete detail beats five vague ones — name the game, the tournament, the date.
-- Pose a question in the first line on FB/IG to lift comment rate.
-- On X, write like a person, not a brand — lowercase, short, one idea.
-- On Telegram, lead with the value, end with the link, no emoji wall.
-- On TikTok captions, treat copy as a hook for the video — under 150 chars, no link, no urgency.
-- Mention GEO naturally ("Live in NJ / PA / MI") not as a disclaimer dump.
-- Always end with the platform-appropriate responsible-play line (already auto-appended).
+## Files touched
 
-## Technical summary
+- `src/lib/social-compliance.ts` — tone rulebooks, hard-block lists, novelty terms, output regexes, new audit types.
+- `src/routes/api/generate-social.ts` — new prompt blocks (tone, GEO, novelty, fabrication, audit), retry loop on hard-block hits, server-side validators, expanded tool schema.
+- `src/components/SocialGenerator.tsx` — structured brief fields, input pre-screen banner, tone label refresh, Compliance Report panel, acknowledgement gate.
+- No DB migrations, no changes to SMS/Email generators, no changes to short-link API.
 
-**Files to edit / create**
-- `supabase/migrations/<ts>_social_short_links.sql` — add `channel`, `manual_label` columns; loosen `promotion_id` to nullable; backfill `channel='sms'`; keep RLS as-is.
-- `src/routes/api/social-shortlink.ts` (new) — handles ready + manual modes, calls short.io with `tags: ["sm"]`.
-- `src/routeTree.gen.ts` — auto-regenerated.
-- `src/components/SocialGenerator.tsx` — link-source toggle, manual-link inputs, required core-idea box, tips accordion, shortlink fetch step.
-- `src/routes/api/generate-social.ts` — accept `promotionUrl` as-is (already does), tighten prompt to treat `topic` as required core idea; add the copywriting tips to the system prompt.
+## Out of scope
 
-**Out of scope**
-- Editing pre-saved promotions (still done via Admin).
-- Per-platform unique short links (single short link reused across platforms per submission — keeps short.io usage and tracking simple).
-- Changing SMS behavior — `/api/shortio` and its `tags: ["sms"]` stay untouched.
+- SMS and Email generators (managers' notes are SM-specific).
+- Catalog / promotions schema changes — new fields live on the generator form only.
+- Multilingual tone rules — English copy only for this pass.
 
 ## Open question
 
-For **manual links**, should we keep the rule that a manual destination URL must live on the selected site's domain (safer — prevents using the short domain for arbitrary third-party URLs), or allow any URL? Default in this plan: **allow any URL**, since the use case is "team member has a landing page not yet in the catalog". Tell me if you want it restricted.
+The current tone list is `fun / informative / community / hype / soft`. The spec uses `promotional / friendly / informational`. Plan is to **replace** the current tones with the spec's three (cleaner, matches managers' language). If you'd rather keep all five and just add the three new ones, say so before implementation.
