@@ -11,6 +11,9 @@ import {
   Share2,
   Lightbulb,
   Link2,
+  ChevronDown,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import {
   Card,
@@ -43,9 +46,11 @@ import {
   PLATFORM_POLICIES,
   SOCIAL_PLATFORMS,
   SOCIAL_TONES,
+  scanInputForHardBlocks,
   type RiskLevel,
   type SocialPlatform,
   type SocialTone,
+  type AuditEntry,
 } from "@/lib/social-compliance";
 import { useCatalog } from "@/lib/catalog";
 import { logGeneration } from "@/lib/usage";
@@ -56,6 +61,10 @@ type VariantOut = {
   risk: RiskLevel;
   reasons: string[];
   rewritten: boolean;
+  blocked?: boolean;
+  audit: AuditEntry[];
+  missing_elements: string[];
+  risk_reason: string;
 };
 
 type PlatformOut = {
@@ -81,8 +90,12 @@ export function SocialGenerator() {
   const [manualUrl, setManualUrl] = useState("");
   const [manualLabel, setManualLabel] = useState("");
   const [geo, setGeo] = useState("");
-  const [tone, setTone] = useState<SocialTone>("fun");
+  const [tone, setTone] = useState<SocialTone>("promotional");
   const [coreIdea, setCoreIdea] = useState("");
+  const [offerName, setOfferName] = useState("");
+  const [offerAmount, setOfferAmount] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [gameTitles, setGameTitles] = useState("");
   const [isUsIgaming, setIsUsIgaming] = useState(true);
   const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(
     () => new Set(DEFAULT_PLATFORMS),
@@ -125,11 +138,18 @@ export function SocialGenerator() {
     });
   };
 
+  // Input pre-screen (Issue 4 Layer 1) — scan brief + structured facts.
+  const inputHits = useMemo(() => {
+    const blob = [coreIdea, offerName, offerAmount, promoCode, gameTitles].join(" \n ");
+    return scanInputForHardBlocks(blob);
+  }, [coreIdea, offerName, offerAmount, promoCode, gameTitles]);
+
   const linkReady =
     linkMode === "ready"
       ? !!promotionId
       : !!siteId && !!manualUrl.trim() && !!manualLabel.trim();
-  const canGenerate = linkReady && coreIdea.trim().length >= 5 && !loading;
+  const canGenerate =
+    linkReady && coreIdea.trim().length >= 5 && inputHits.length === 0 && !loading;
 
   const handleGenerate = async () => {
     setErrorMsg(null);
@@ -137,7 +157,6 @@ export function SocialGenerator() {
     setUsedShortUrl(null);
     setLoading(true);
     try {
-      // 1. Resolve short link via /api/social-shortlink
       const shortBody =
         linkMode === "ready"
           ? { action: "ready" as const, promotionId }
@@ -163,11 +182,8 @@ export function SocialGenerator() {
       setUsedShortUrl(shortUrl);
 
       const promotionName =
-        linkMode === "ready"
-          ? selectedPromotion?.name
-          : manualLabel.trim();
+        linkMode === "ready" ? selectedPromotion?.name : manualLabel.trim();
 
-      // 2. Generate posts
       const payload = {
         siteId: siteId || undefined,
         brandName: siteId || undefined,
@@ -178,6 +194,12 @@ export function SocialGenerator() {
         isUsIgaming,
         tone,
         platforms: Array.from(platforms),
+        facts: {
+          offerName: offerName.trim() || undefined,
+          offerAmount: offerAmount.trim() || undefined,
+          promoCode: promoCode.trim() || undefined,
+          gameTitles: gameTitles.trim() || undefined,
+        },
       };
 
       const resp = await fetch("/api/generate-social", {
@@ -215,7 +237,6 @@ export function SocialGenerator() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      {/* Form */}
       <Card>
         <CardHeader>
           <CardTitle>Social post details</CardTitle>
@@ -255,7 +276,6 @@ export function SocialGenerator() {
               </div>
             </div>
 
-            {/* Link source */}
             <div className="space-y-2">
               <Label>Link source</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -348,6 +368,37 @@ export function SocialGenerator() {
             </p>
           </div>
 
+          {/* Structured facts (Issue 5 — anti-fabrication) */}
+          <div className="space-y-3 rounded-md border border-dashed bg-muted/20 p-3">
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Brief facts (optional but recommended)</p>
+                <p className="text-xs text-muted-foreground">
+                  Only details entered here may appear verbatim in the copy. Leave blank to keep the AI generic.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="f-name" className="text-xs">Offer name</Label>
+                <Input id="f-name" value={offerName} onChange={(e) => setOfferName(e.target.value)} placeholder="e.g. Summer Drop" maxLength={200} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="f-amount" className="text-xs">Offer amount</Label>
+                <Input id="f-amount" value={offerAmount} onChange={(e) => setOfferAmount(e.target.value)} placeholder="e.g. $20 credit · 100 spins" maxLength={80} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="f-code" className="text-xs">Promo code</Label>
+                <Input id="f-code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="e.g. WELCOME50 (leave blank if none)" maxLength={80} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="f-games" className="text-xs">Game titles</Label>
+                <Input id="f-games" value={gameTitles} onChange={(e) => setGameTitles(e.target.value)} placeholder="e.g. Lucky Wilds, Reel Rush" maxLength={300} />
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="s-geo">Target GEO</Label>
@@ -358,7 +409,7 @@ export function SocialGenerator() {
                 placeholder="e.g. US – NJ, PA, MI"
               />
               <p className="text-xs text-muted-foreground">
-                Required for US iGaming on Meta. Mentioned naturally in the post.
+                Internal targeting only. Will NOT appear in caption body (eligibility lives in the disclaimer).
               </p>
             </div>
             <div className="space-y-2">
@@ -371,7 +422,7 @@ export function SocialGenerator() {
                 <span>
                   <span className="font-medium">US iGaming</span>
                   <span className="block text-xs text-muted-foreground">
-                    Forces GEO check; flags variants High if GEO is missing.
+                    Applies stricter compliance review.
                   </span>
                 </span>
               </label>
@@ -403,6 +454,29 @@ export function SocialGenerator() {
             </div>
           </div>
 
+          {/* Input hard-block banner */}
+          {inputHits.length > 0 && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
+              <div className="flex items-start gap-2 text-destructive">
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    Brief contains blocked phrase{inputHits.length > 1 ? "s" : ""}. Generation disabled until removed.
+                  </p>
+                  <ul className="space-y-1">
+                    {inputHits.map((h) => (
+                      <li key={h.term} className="text-xs">
+                        <span className="rounded bg-destructive/20 px-1.5 py-0.5 font-mono">{h.term}</span>
+                        <span className="mx-1 text-muted-foreground">→ try</span>
+                        <span className="rounded bg-success/20 px-1.5 py-0.5 font-mono text-success-foreground">{h.safer}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Button
             onClick={handleGenerate}
             disabled={!canGenerate}
@@ -427,13 +501,12 @@ export function SocialGenerator() {
               <AccordionContent className="px-3 pt-3 text-sm text-muted-foreground">
                 <ul className="list-disc space-y-1.5 pl-4">
                   <li>Lead with curiosity, not the offer. A hook beats a hard sell.</li>
-                  <li>One concrete detail beats five vague ones — name the game, the day, the feature.</li>
-                  <li><strong>Facebook / Instagram:</strong> open with a question to invite comments.</li>
-                  <li><strong>X:</strong> write like a person, not a brand — lowercase, short, one idea.</li>
-                  <li><strong>Telegram:</strong> lead with the value, end with the link, no emoji wall.</li>
-                  <li><strong>TikTok:</strong> caption is a hook for the video — short, no link, no urgency.</li>
-                  <li>Mention GEO naturally inside a sentence, not as a tacked-on disclaimer dump.</li>
-                  <li>Responsible-play disclaimer is auto-appended per platform — don't repeat it manually.</li>
+                  <li>One concrete detail beats five vague ones — fill in Brief facts above.</li>
+                  <li><strong>Promotional:</strong> short punchy sentences, 1–2 emojis max at line ends.</li>
+                  <li><strong>Friendly:</strong> address the reader as "you", open with a question.</li>
+                  <li><strong>Informational:</strong> neutral, no emoji, no claim adjectives.</li>
+                  <li>GEO/eligibility lives only in the disclaimer — never in the caption body.</li>
+                  <li>If you don't enter a promo code or amount, the AI will not invent one.</li>
                 </ul>
               </AccordionContent>
             </AccordionItem>
@@ -441,7 +514,6 @@ export function SocialGenerator() {
         </CardContent>
       </Card>
 
-      {/* Output */}
       <div className="space-y-4">
         {errorMsg && (
           <Card className="border-destructive/50 bg-destructive/5">
@@ -514,6 +586,7 @@ function PlatformResult({
           key={i}
           label={`Variant ${String.fromCharCode(65 + i)}`}
           variant={v}
+          platformLabel={policy.label}
           onCopy={() =>
             onCopy(
               v.hashtags.length ? `${v.copy}\n\n${v.hashtags.join(" ")}` : v.copy,
@@ -529,12 +602,36 @@ function PlatformResult({
 function VariantCard({
   label,
   variant,
+  platformLabel,
   onCopy,
 }: {
   label: string;
   variant: VariantOut;
+  platformLabel: string;
   onCopy: () => void;
 }) {
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+
+  if (variant.blocked) {
+    return (
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-destructive">
+            <XCircle className="h-4 w-4" />
+            {label} — Blocked by compliance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-destructive">
+          <p>{variant.risk_reason || "Could not produce compliant copy after retries."}</p>
+          <p className="text-xs text-muted-foreground">
+            Refine your brief (remove guarantees, win promises, urgency) and try again.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const RiskIcon =
     variant.risk === "low" ? ShieldCheck : variant.risk === "medium" ? Shield : ShieldAlert;
   const riskColor =
@@ -549,6 +646,9 @@ function VariantCard({
       : variant.risk === "medium"
         ? "bg-warning/10 border-warning/30"
         : "bg-destructive/10 border-destructive/40";
+
+  const hasWarnings = variant.missing_elements.length > 0;
+  const canCopy = !hasWarnings || acknowledged;
 
   return (
     <Card>
@@ -566,16 +666,94 @@ function VariantCard({
             <span className="text-muted-foreground">{variant.copy.length} chars</span>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCopy} className="h-8 px-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCopy}
+          disabled={!canCopy}
+          title={!canCopy ? "Acknowledge warnings first" : `Copy ${platformLabel}`}
+          className="h-8 px-2"
+        >
           <Copy className="h-3.5 w-3.5" />
         </Button>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{variant.copy}</p>
         {variant.hashtags.length > 0 && (
           <p className="text-xs font-medium text-primary">{variant.hashtags.join(" ")}</p>
         )}
-        <p className="text-xs text-muted-foreground">{variant.reasons.join(" · ")}</p>
+
+        {hasWarnings && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5">
+            <div className="flex items-start gap-2 text-warning">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {variant.missing_elements.map((m, i) => (
+                    <span key={i} className="rounded-md border border-warning/40 bg-background px-1.5 py-0.5 text-xs">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-xs text-foreground">
+                  <Checkbox checked={acknowledged} onCheckedChange={(v) => setAcknowledged(v === true)} />
+                  I have reviewed these warnings and want to copy anyway.
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Compliance Report (Issue 6) */}
+        <button
+          type="button"
+          onClick={() => setAuditOpen((v) => !v)}
+          className="flex w-full items-center justify-between rounded-md border bg-muted/40 px-2.5 py-1.5 text-xs hover:bg-muted/60"
+        >
+          <span className="font-medium">
+            Compliance report{variant.audit.length > 0 ? ` (${variant.audit.length})` : ""}
+          </span>
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", auditOpen && "rotate-180")} />
+        </button>
+        {auditOpen && (
+          <div className="space-y-2 rounded-md border bg-muted/20 p-2.5 text-xs">
+            {variant.risk_reason && (
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">Why this score:</span> {variant.risk_reason}
+              </p>
+            )}
+            {variant.audit.length === 0 ? (
+              <p className="text-muted-foreground">No compliance edits recorded for this variant.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {variant.audit.map((a, i) => {
+                  const rlc =
+                    a.risk_level === "High"
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : a.risk_level === "Medium"
+                        ? "border-warning/40 bg-warning/10 text-warning"
+                        : "border-success/40 bg-success/10 text-success";
+                  return (
+                    <li key={i} className="rounded-md border bg-background p-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded bg-destructive/15 px-1.5 py-0.5 font-mono text-destructive">{a.original_term}</span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="rounded bg-success/15 px-1.5 py-0.5 font-mono text-success">{a.replacement}</span>
+                        <span className={cn("ml-auto rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider", rlc)}>
+                          {a.risk_level}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-muted-foreground">{a.reason}</p>
+                      {a.rule_reference && (
+                        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/80">{a.rule_reference}</p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -609,7 +787,7 @@ function SocialEmptyState() {
         </div>
         <p className="text-sm font-medium">Your social posts will appear here</p>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-          Pick a site, link, GEO, tone, and write the core idea. We generate 3 compliance-safe variants per platform.
+          Pick a site, link, tone, and write the core idea. We generate 3 compliance-safe variants per platform with a full audit trail.
         </p>
       </CardContent>
     </Card>
