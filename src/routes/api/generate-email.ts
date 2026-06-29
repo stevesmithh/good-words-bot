@@ -290,6 +290,14 @@ function buildFriendlyPrompt(input: {
 ${audienceLine}
 ${brandLine}
 
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts that are explicitly written in the offer details above.
+- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
+- Forbidden fabrications include: numbers, amounts, percentages, dollar values, dates, deadlines, expiry times, product names, game names, tier/level names, codes, promo codes, bonus names, eligibility rules, minimum deposits, wagering requirements, regions, currencies, partner names, statistics, social proof, testimonials.
+- If a piece of information is not in the offer, OMIT it. Never guess. Never use plausible placeholders.
+- If the offer is short or vague, the email must also be short. Better to write less than to invent.
+- Names, numbers, and codes must be copied character-for-character from the offer details.
+
 IMPORTANT: Return your answer by calling the provided tool "return_friendly_email" with these fields:
 - subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
 - preheader: the Preheader text only (one short helpful sentence).
