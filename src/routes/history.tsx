@@ -39,6 +39,7 @@ function HistoryPage() {
   const [loading, setLoading] = useState(false);
   const [kindFilter, setKindFilter] = useState<"all" | Kind>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [selected, setSelected] = useState<HistoryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
