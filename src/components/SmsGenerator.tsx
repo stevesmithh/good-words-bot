@@ -267,6 +267,12 @@ export function SmsGenerator() {
       setResult(data as SmsResult);
       toast.success(link.isReused ? "SMS generated (reused link)" : "SMS generated (new link)");
       void logGeneration("sms");
+      void logHistory({
+        kind: "sms",
+        label: offerDetails.slice(0, 80),
+        input: { ...payload, offerDetails },
+        output: data,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(message);
