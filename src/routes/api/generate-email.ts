@@ -345,6 +345,15 @@ REWARD EXTRACTION RULES:
 - List every reward type in the email body on its own short line.
 - Do not skip any reward category.
 
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts that are explicitly written in the offer details above. Treat the offer as the single source of truth.
+- DO NOT invent, assume, infer, embellish, or add ANY reward, number, amount, percentage, dollar value, code, date, deadline, expiry, tier, level, game name, product name, region, currency, eligibility rule, minimum deposit, wagering requirement, partner, statistic, or social proof that is not literally present in the offer text.
+- DO NOT add extra reward categories the offer did not mention.
+- DO NOT round, scale, or "improve" numbers — copy them character-for-character.
+- If the offer is short or vague, the email must also be short. Better to write less than to invent.
+- If something is not in the offer, OMIT it. Never guess. Never use plausible placeholders.
+
+
 FORBIDDEN WORDS (do not use any of these — replace with the safe alternatives below):
 ${forbiddenList}
 
