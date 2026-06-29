@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare, LogOut, Share2 } from "lucide-react";
+import { Mail, MessageSquare, LogOut, Share2, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
@@ -52,6 +52,14 @@ function Index() {
               Signed in as <strong className="font-medium text-foreground">{session.username}</strong>
               {session.isAdmin && " (admin)"}
             </span>
+          )}
+          {session && (
+            <Link to="/history">
+              <Button variant="outline" size="sm" className="gap-2" title="View past generations">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">History</span>
+              </Button>
+            </Link>
           )}
           {session?.isAdmin && <AdminButton />}
           <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2" title="Sign out">

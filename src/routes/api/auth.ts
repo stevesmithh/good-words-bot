@@ -150,6 +150,62 @@ export const Route = createFileRoute("/api/auth")({
             return Response.json({ success: true });
           }
 
+          // Record a generated copy (input + output) for later review
+          if (body.action === "logHistory") {
+            const kind = asStr(body.kind);
+            if (kind !== "email" && kind !== "sms" && kind !== "social") return bad("Invalid kind");
+            const label = asStr(body.label);
+            const input = (body.input && typeof body.input === "object") ? body.input : {};
+            const output = (body.output && typeof body.output === "object") ? body.output : {};
+            const { error } = await supabase
+              .from("generation_history")
+              .insert({ username: me.username, kind, label, input, output });
+            if (error) {
+              console.error("[auth] logHistory error:", error);
+              return bad("Database operation failed", 500);
+            }
+            return Response.json({ success: true });
+          }
+
+          // List history — admins see everyone; members see only their own
+          if (body.action === "listHistory") {
+            const kindFilter = asStr(body.kind);
+            const userFilter = asStr(body.filterUsername);
+            const limit = Math.min(Math.max(Number(body.limit) || 100, 1), 500);
+            let q = supabase
+              .from("generation_history")
+              .select("id, username, kind, label, created_at")
+              .order("created_at", { ascending: false })
+              .limit(limit);
+            if (!me.is_admin) q = q.eq("username", me.username);
+            else if (userFilter) q = q.eq("username", userFilter);
+            if (kindFilter && ["email", "sms", "social"].includes(kindFilter)) q = q.eq("kind", kindFilter);
+            const { data, error } = await q;
+            if (error) {
+              console.error("[auth] listHistory error:", error);
+              return bad("Database operation failed", 500);
+            }
+            return Response.json({ items: data ?? [] });
+          }
+
+          // Fetch a single history entry (admin: any; member: own only)
+          if (body.action === "getHistory") {
+            const id = asStr(body.id);
+            if (!id) return bad("id required");
+            const { data, error } = await supabase
+              .from("generation_history")
+              .select("id, username, kind, label, input, output, created_at")
+              .eq("id", id)
+              .maybeSingle();
+            if (error) {
+              console.error("[auth] getHistory error:", error);
+              return bad("Database operation failed", 500);
+            }
+            if (!data) return bad("Not found", 404);
+            if (!me.is_admin && data.username !== me.username) return bad("Forbidden", 403);
+            return Response.json({ item: data });
+          }
+
           // Any logged-in member can fetch the SMS providers catalog
           if (body.action === "listProviders") {
             const { data, error } = await supabase

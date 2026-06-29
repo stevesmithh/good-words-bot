@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSocialShortlinkRouteImport } from './routes/api/social-shortlink'
 import { Route as ApiShortioRouteImport } from './routes/api/shortio'
@@ -18,6 +19,11 @@ import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-emai
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,6 +67,7 @@ const ApiAdminRoute = ApiAdminRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/history'
     | '/api/admin'
     | '/api/auth'
     | '/api/generate-email'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/history'
     | '/api/admin'
     | '/api/auth'
     | '/api/generate-email'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/history'
     | '/api/admin'
     | '/api/auth'
     | '/api/generate-email'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HistoryRoute: typeof HistoryRoute
   ApiAdminRoute: typeof ApiAdminRoute
   ApiAuthRoute: typeof ApiAuthRoute
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
@@ -136,6 +149,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HistoryRoute: HistoryRoute,
   ApiAdminRoute: ApiAdminRoute,
   ApiAuthRoute: ApiAuthRoute,
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,

@@ -53,7 +53,7 @@ import {
   type AuditEntry,
 } from "@/lib/social-compliance";
 import { useCatalog } from "@/lib/catalog";
-import { logGeneration } from "@/lib/usage";
+import { logGeneration, logHistory } from "@/lib/usage";
 
 type VariantOut = {
   copy: string;
@@ -217,6 +217,12 @@ export function SocialGenerator() {
       setResults((data.platforms ?? []) as PlatformOut[]);
       toast.success("Social posts generated");
       void logGeneration("sms");
+      void logHistory({
+        kind: "social",
+        label: coreIdea.slice(0, 80) || promotionName || null,
+        input: payload,
+        output: data,
+      });
     } catch (err) {
       const m = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(m);
