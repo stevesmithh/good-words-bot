@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare, LogOut, Share2 } from "lucide-react";
+import { Mail, MessageSquare, LogOut, Share2, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
