@@ -53,7 +53,7 @@ import {
   type AuditEntry,
 } from "@/lib/social-compliance";
 import { useCatalog } from "@/lib/catalog";
-import { logGeneration } from "@/lib/usage";
+import { logGeneration, logHistory } from "@/lib/usage";
 
 type VariantOut = {
   copy: string;
