@@ -32,7 +32,7 @@ import {
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
 import { useCatalog } from "@/lib/catalog";
-import { logGeneration } from "@/lib/usage";
+import { logGeneration, logHistory } from "@/lib/usage";
 
 type SiteId = string;
 type SmsProvider = string;
