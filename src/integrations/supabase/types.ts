@@ -35,6 +35,36 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_history: {
+        Row: {
+          created_at: string
+          id: string
+          input: Json
+          kind: string
+          label: string | null
+          output: Json
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input?: Json
+          kind: string
+          label?: string | null
+          output?: Json
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input?: Json
+          kind?: string
+          label?: string | null
+          output?: Json
+          username?: string
+        }
+        Relationships: []
+      }
       promotions: {
         Row: {
           created_at: string
