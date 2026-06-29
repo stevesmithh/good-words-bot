@@ -58,6 +58,7 @@ function HistoryPage() {
           password: session.password,
           kind: kindFilter === "all" ? undefined : kindFilter,
           filterUsername: userFilter === "all" ? undefined : userFilter,
+          period: periodFilter === "all" ? undefined : periodFilter,
           limit: 200,
         }),
       });
