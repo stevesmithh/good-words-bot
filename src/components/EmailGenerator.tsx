@@ -133,6 +133,19 @@ export function EmailGenerator() {
       setResult(data as EmailResult);
       toast.success("Email generated");
       void logGeneration("email");
+      void logHistory({
+        kind: "email",
+        label: offerDetails.slice(0, 80),
+        input: {
+          inboxType,
+          offerDetails,
+          audience,
+          brandName: brandName.trim() || undefined,
+          extraForbidden: extraForbidden.trim() || undefined,
+          activeCategories: Array.from(activeCategories),
+        },
+        output: data,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       setErrorMsg(message);
