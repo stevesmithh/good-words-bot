@@ -53,6 +53,14 @@ function Index() {
               {session.isAdmin && " (admin)"}
             </span>
           )}
+          {session && (
+            <Link to="/history">
+              <Button variant="outline" size="sm" className="gap-2" title="View past generations">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">History</span>
+              </Button>
+            </Link>
+          )}
           {session?.isAdmin && <AdminButton />}
           <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2" title="Sign out">
             <LogOut className="h-4 w-4" />
