@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
-import { logGeneration } from "@/lib/usage";
+import { logGeneration, logHistory } from "@/lib/usage";
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
