@@ -76,7 +76,7 @@ function HistoryPage() {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kindFilter, userFilter]);
+  }, [kindFilter, userFilter, periodFilter]);
 
   const openDetail = async (id: string) => {
     if (!session) return;
