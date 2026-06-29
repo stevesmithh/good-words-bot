@@ -147,11 +147,20 @@ function buildPrimaryPrompt(input: {
 ${audienceLine}
 ${brandLine}
 
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts that are explicitly written in the offer details above.
+- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
+- Forbidden fabrications include (but are not limited to): numbers, amounts, percentages, dollar values, dates, deadlines, expiry times, product names, game names, tier names, level names, codes, promo codes, bonus names, eligibility rules, minimum deposits, wagering requirements, regions, currencies, brand references, partner names, statistics ("over 1000 players…"), social proof, testimonials.
+- If a piece of information is not in the offer, OMIT it. Do NOT guess. Do NOT use plausible-sounding placeholders.
+- If the offer is short or vague, the email must also be short. Better to write less than to invent.
+- Names, numbers, and codes must be copied character-for-character from the offer details. Do not reformat or "improve" them.
+
 IMPORTANT: Return your answer by calling the provided tool "return_primary_email" with these fields:
 - subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
 - preheader: the Preheader text only (one short neutral sentence).
 - body: the full Email Body starting from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — the button label itself goes in the cta field.
 - cta: the CTA button label only, 2–4 words, strong and clear (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
+
 }
 
 // =====================================================================
@@ -281,6 +290,14 @@ function buildFriendlyPrompt(input: {
 ${audienceLine}
 ${brandLine}
 
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts that are explicitly written in the offer details above.
+- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
+- Forbidden fabrications include: numbers, amounts, percentages, dollar values, dates, deadlines, expiry times, product names, game names, tier/level names, codes, promo codes, bonus names, eligibility rules, minimum deposits, wagering requirements, regions, currencies, partner names, statistics, social proof, testimonials.
+- If a piece of information is not in the offer, OMIT it. Never guess. Never use plausible placeholders.
+- If the offer is short or vague, the email must also be short. Better to write less than to invent.
+- Names, numbers, and codes must be copied character-for-character from the offer details.
+
 IMPORTANT: Return your answer by calling the provided tool "return_friendly_email" with these fields:
 - subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
 - preheader: the Preheader text only (one short helpful sentence).
@@ -327,6 +344,15 @@ REWARD EXTRACTION RULES:
 - For each type, use the highest value exactly as written in the offer — do not round, do not paraphrase numbers.
 - List every reward type in the email body on its own short line.
 - Do not skip any reward category.
+
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts that are explicitly written in the offer details above. Treat the offer as the single source of truth.
+- DO NOT invent, assume, infer, embellish, or add ANY reward, number, amount, percentage, dollar value, code, date, deadline, expiry, tier, level, game name, product name, region, currency, eligibility rule, minimum deposit, wagering requirement, partner, statistic, or social proof that is not literally present in the offer text.
+- DO NOT add extra reward categories the offer did not mention.
+- DO NOT round, scale, or "improve" numbers — copy them character-for-character.
+- If the offer is short or vague, the email must also be short. Better to write less than to invent.
+- If something is not in the offer, OMIT it. Never guess. Never use plausible placeholders.
+
 
 FORBIDDEN WORDS (do not use any of these — replace with the safe alternatives below):
 ${forbiddenList}
