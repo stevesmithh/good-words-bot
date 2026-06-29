@@ -39,6 +39,7 @@ function HistoryPage() {
   const [loading, setLoading] = useState(false);
   const [kindFilter, setKindFilter] = useState<"all" | Kind>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [selected, setSelected] = useState<HistoryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -57,6 +58,7 @@ function HistoryPage() {
           password: session.password,
           kind: kindFilter === "all" ? undefined : kindFilter,
           filterUsername: userFilter === "all" ? undefined : userFilter,
+          period: periodFilter === "all" ? undefined : periodFilter,
           limit: 200,
         }),
       });
@@ -74,7 +76,7 @@ function HistoryPage() {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kindFilter, userFilter]);
+  }, [kindFilter, userFilter, periodFilter]);
 
   const openDetail = async (id: string) => {
     if (!session) return;
@@ -148,7 +150,7 @@ function HistoryPage() {
               <CardTitle className="text-base">Entries</CardTitle>
               <Badge variant="secondary">{items.length}</Badge>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${isAdmin ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-xs text-muted-foreground">Type</label>
                 <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as typeof kindFilter)}>
@@ -160,6 +162,21 @@ function HistoryPage() {
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="sms">SMS</SelectItem>
                     <SelectItem value="social">Social</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Period</label>
+                <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="7d">Last 7 days</SelectItem>
+                    <SelectItem value="30d">Last 30 days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

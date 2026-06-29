@@ -106,6 +106,27 @@ function rangeFor(filter: string, customFrom?: string, customTo?: string): { fro
   return { from: start, to: now };
 }
 
+function periodSince(period: string): Date | null {
+  const now = new Date();
+  if (period === "today") return startOf(now);
+  if (period === "yesterday") {
+    const d = startOf(now);
+    d.setDate(d.getDate() - 1);
+    return d;
+  }
+  if (period === "7d") {
+    const d = startOf(now);
+    d.setDate(d.getDate() - 6);
+    return d;
+  }
+  if (period === "30d") {
+    const d = startOf(now);
+    d.setDate(d.getDate() - 29);
+    return d;
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/api/auth")({
   server: {
     handlers: {
@@ -171,6 +192,7 @@ export const Route = createFileRoute("/api/auth")({
           if (body.action === "listHistory") {
             const kindFilter = asStr(body.kind);
             const userFilter = asStr(body.filterUsername);
+            const period = asStr(body.period) ?? "all";
             const limit = Math.min(Math.max(Number(body.limit) || 100, 1), 500);
             let q = supabase
               .from("generation_history")
@@ -180,6 +202,8 @@ export const Route = createFileRoute("/api/auth")({
             if (!me.is_admin) q = q.eq("username", me.username);
             else if (userFilter) q = q.eq("username", userFilter);
             if (kindFilter && ["email", "sms", "social"].includes(kindFilter)) q = q.eq("kind", kindFilter);
+            const since = periodSince(period);
+            if (since) q = q.gte("created_at", since.toISOString());
             const { data, error } = await q;
             if (error) {
               console.error("[auth] listHistory error:", error);
