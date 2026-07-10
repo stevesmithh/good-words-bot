@@ -20,9 +20,8 @@ const AUDIENCE_TONE: Record<Audience, string> = {
 };
 
 // =====================================================================
-// PRIMARY INBOX PROMPT — used VERBATIM, every single time.
-// Do NOT edit, shorten, or paraphrase this prompt. Only the user's offer
-// details are appended at the bottom where the placeholder lives.
+// PRIMARY INBOX PROMPT — keep concise, scannable, and under 100 words.
+// Edit only when the user requests copy length/tone changes.
 // =====================================================================
 const PRIMARY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
 
