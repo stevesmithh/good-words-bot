@@ -20,9 +20,8 @@ const AUDIENCE_TONE: Record<Audience, string> = {
 };
 
 // =====================================================================
-// PRIMARY INBOX PROMPT — used VERBATIM, every single time.
-// Do NOT edit, shorten, or paraphrase this prompt. Only the user's offer
-// details are appended at the bottom where the placeholder lives.
+// PRIMARY INBOX PROMPT — keep concise, scannable, and under 100 words.
+// Edit only when the user requests copy length/tone changes.
 // =====================================================================
 const PRIMARY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
 
@@ -62,19 +61,19 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
    - Helpful and neutral
 
-3. **Email Body Structure**
+3. **Email Body Structure** (total 60–90 words; absolute maximum 100 words)
 
    - Personal greeting: "Hi {{ insert first_name 'default=default' }}," or "Hi [First Name],"
 
-   - Warm but calm opening line (1 sentence)
+   - One warm but calm opening line (1 sentence)
 
-   - Clear explanation of what happened or what needs to be done
+   - Clear, one-sentence explanation of what happened or what to do
 
-   - Bullet points for details when useful
+   - Optional bullet points (2–3 short bullets max)
 
-   - One clear CTA with strong button text
+   - One clear CTA sentence with the button label
 
-   - Soft helpful closing
+   - Soft helpful closing (1 sentence)
 
    - Sign-off: "Best regards, The BitPlay Team"
 
@@ -100,7 +99,9 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 - Make the CTA feel like the natural next step
 
-- Keep total email readable in under 15 seconds on mobile
+- Keep the body strictly under 100 words so it is readable in under 15 seconds on mobile
+
+- Use 3–4 short paragraphs separated by blank lines; no long block of text
 
 - Use whitespace generously
 
@@ -164,9 +165,8 @@ IMPORTANT: Return your answer by calling the provided tool "return_primary_email
 }
 
 // =====================================================================
-// FRIENDLY INBOX PROMPT — used VERBATIM, every single time.
-// Do NOT edit, shorten, or paraphrase this prompt. Only the user's offer
-// details are appended at the bottom where the placeholder lives.
+// FRIENDLY INBOX PROMPT — very short, everyday language, 40–70 words.
+// Edit only when the user requests copy length/tone changes.
 // =====================================================================
 const FRIENDLY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
 
@@ -186,7 +186,7 @@ Your specialty is transforming any promotional or marketing information into cle
 
 bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
 
-### NEW IMPORTANT RULE - EXTREME SIMPLICITY
+### NEW IMPORTANT RULE - EXTREME SIMPLICITY & SHORT LENGTH
 
 - Use very simple, everyday words.
 
@@ -198,9 +198,13 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 - Make the email extremely easy to read and understand in under 10 seconds.
 
+- Total body length: 40–70 words. Absolute maximum 80 words.
+
 - Avoid complex words. Use simple alternatives.
 
 - Make the message crystal clear so anyone can understand it immediately.
+
+- Include only the greeting, one opener, one key detail, one short CTA line, and the sign-off.
 
 ### ALWAYS FOLLOW THIS EXACT STRUCTURE
 
@@ -214,19 +218,19 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 2. **Preheader** (1 short helpful sentence)
 
-3. **Email Body Structure**
+3. **Email Body Structure** (total 40–70 words; max 80 words)
 
    - Personal greeting: "Hi {{ insert first_name 'default=default' }},"
 
    - One short, warm opening line
 
-   - Clear explanation
+   - One clear explanation sentence
 
-   - Bullet points for details (keep them very simple)
+   - Optional bullet points (2–3 very simple bullets max)
 
-   - One clear CTA button
+   - One clear CTA button line
 
-   - Helpful closing
+   - Helpful closing (1 sentence)
 
    - Sign-off: "Best regards, The BitPlay Team"
 
@@ -248,7 +252,9 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 - Make sure even a tired person can understand the email quickly
 
-- Keep total email short and scannable
+- Keep total body strictly between 40–70 words; never over 80 words
+
+- Use 2–3 short paragraphs only
 
 ### OUTPUT FORMAT (Always use exactly this format)
 
@@ -387,10 +393,10 @@ DELIVERABILITY RULES:
 - Subject line: MUST start with exactly one emoji that visually relates to the offer (e.g. 🎁 for gifts, 🎰 for spins, 💸 for cash back, 🎯 for targeted offers, ☕ for casual, 🌟 for rewards). Pick the single most relevant emoji — never more than one, never generic ones like 😀. Follow the emoji with one space, then the subject text. Total length under 50 characters including the emoji. Personal curious tone, no "free" as first word, no exclamation marks, no all-caps, must not sound like an ad.
 - Preview text: SHORT — strictly under 50 characters. Aim for 30–45 characters. One short phrase that adds new context not in the subject. No pressure language, no punctuation pile-ups, no emojis.
 - Header: 3–7 words, warm and plain.
-- Body: structured as 2–3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line. Structure:
-  1. Opening paragraph (1–3 sentences): warm opener tailored to the audience, leading into why you are writing. Sentences flow together in the same paragraph.
-  2. Rewards block: one short intro line, then each reward on its own line as a compact list (this is the ONLY place line breaks per item are allowed). Format each reward line as "Label: value" (e.g. "Goldmine Rewards: up to $300 weekly").
-  3. Closing paragraph (1–2 sentences): a soft, low-pressure nudge about where to find it or how to use it. No "click here", no "buy now". Sentences flow on the same line.
+- Body: strictly 60–100 words. Structure as 2–3 short paragraphs separated by a blank line (\\n\\n). Sentences inside a paragraph flow naturally on the same line — do NOT put every sentence on its own line. Structure:
+  1. Opening paragraph (1–2 sentences): warm opener tailored to the audience, leading into why you are writing. Sentences flow together in the same paragraph.
+  2. Rewards block: one short intro line, then each reward on its own line as a compact list (this is the ONLY place line breaks per item are allowed). Format each reward line as "Label: value" (e.g. "Goldmine Rewards: up to $300 weekly"). Keep the list to 2–4 items max.
+  3. Closing paragraph (1 sentence): a soft, low-pressure nudge about where to find it or how to use it. No "click here", no "buy now". Sentences flow on the same line.
 - Use \\n\\n between paragraphs (blank line) and single \\n only between reward items inside the rewards block.
 - Never start every sentence on a new line. Outside the rewards block, sentences should sit next to each other within a paragraph like a normal human email.
 - CTA button: 2–4 words, plain and friendly, action-oriented but never pushy. Title Case. No emojis, no exclamation marks, no all-caps. AVOID spammy CTA words like: "Buy Now", "Click Here", "Act Now", "Order Now", "Shop Now", "Claim Now", "Sign Up Now", "Free", "Limited Time", "Don't Miss". PREFER soft, safe phrasings like: "See Details", "Take a Look", "View Your Offer", "Open Your Rewards", "Check It Out", "Explore Rewards", "See What's Inside", "Visit Your Account".
@@ -409,7 +415,7 @@ const PROMOTIONAL_TOOL = {
         subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
         preview: { type: "string", description: "SHORT preview text — strictly under 50 characters, ideally 30–45." },
         header: { type: "string", description: "Email header, 3-7 words." },
-        body: { type: "string", description: "Email body as 2-3 short paragraphs separated by a blank line (\\n\\n)." },
+        body: { type: "string", description: "Email body. 60–100 words total. 2–3 short paragraphs separated by \\n\\n. Opening paragraph, compact rewards list (one per line), and one closing sentence." },
         cta: { type: "string", description: "Call-to-action button text, 2-4 words, Title Case, friendly and safe." },
       },
       required: ["subject", "preview", "header", "body", "cta"],
@@ -428,7 +434,7 @@ const PRIMARY_TOOL = {
       properties: {
         subject: { type: "string", description: "Subject Line text only — 6 to 8 words, action-oriented or account-focused, no emoji, no '**Subject Line:**' prefix." },
         preheader: { type: "string", description: "Preheader — one short, neutral, helpful sentence." },
-        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Preserve markdown bold (**like this**). Paragraphs separated by \\n\\n." },
+        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Keep it concise: 60–90 words, absolute max 100 words. 3–4 short paragraphs separated by \\n\\n. Preserve markdown bold (**like this**)." },
         cta: { type: "string", description: "CTA button label only — 2 to 4 words, strong transactional style, no emoji." },
       },
       required: ["subject", "preheader", "body", "cta"],
@@ -447,7 +453,7 @@ const FRIENDLY_TOOL = {
       properties: {
         subject: { type: "string", description: "Subject Line text only — 6 to 8 words, clear and action-oriented, sounds like an account update. No emoji, no '**Subject Line:**' prefix." },
         preheader: { type: "string", description: "Preheader — one short helpful sentence." },
-        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Very simple language, short sentences (max 15-20 words), short paragraphs (2-3 lines). Preserve markdown bold (**like this**). Paragraphs separated by \\n\\n." },
+        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. 40–70 words, max 80 words. Very simple language, short sentences (max 15-20 words), short paragraphs (2-3 lines). 2–3 paragraphs separated by \\n\\n. Preserve markdown bold (**like this**)." },
         cta: { type: "string", description: "CTA button label only — 2 to 4 words, simple and clear, no emoji." },
       },
       required: ["subject", "preheader", "body", "cta"],
