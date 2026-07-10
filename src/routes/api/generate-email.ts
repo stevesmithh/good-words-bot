@@ -252,7 +252,9 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 - Make sure even a tired person can understand the email quickly
 
-- Keep total email short and scannable
+- Keep total body strictly between 40–70 words; never over 80 words
+
+- Use 2–3 short paragraphs only
 
 ### OUTPUT FORMAT (Always use exactly this format)
 
