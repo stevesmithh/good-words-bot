@@ -99,7 +99,9 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 - Make the CTA feel like the natural next step
 
-- Keep total email readable in under 15 seconds on mobile
+- Keep the body strictly under 100 words so it is readable in under 15 seconds on mobile
+
+- Use 3–4 short paragraphs separated by blank lines; no long block of text
 
 - Use whitespace generously
 
