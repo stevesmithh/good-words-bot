@@ -415,7 +415,7 @@ const PROMOTIONAL_TOOL = {
         subject: { type: "string", description: "Subject line starting with exactly one relevant emoji + space + text. Under 50 chars total." },
         preview: { type: "string", description: "SHORT preview text — strictly under 50 characters, ideally 30–45." },
         header: { type: "string", description: "Email header, 3-7 words." },
-        body: { type: "string", description: "Email body as 2-3 short paragraphs separated by a blank line (\\n\\n)." },
+        body: { type: "string", description: "Email body. 60–100 words total. 2–3 short paragraphs separated by \\n\\n. Opening paragraph, compact rewards list (one per line), and one closing sentence." },
         cta: { type: "string", description: "Call-to-action button text, 2-4 words, Title Case, friendly and safe." },
       },
       required: ["subject", "preview", "header", "body", "cta"],
