@@ -429,7 +429,7 @@ const PRIMARY_TOOL = {
       properties: {
         subject: { type: "string", description: "Subject Line text only — 6 to 8 words, action-oriented or account-focused, no emoji, no '**Subject Line:**' prefix." },
         preheader: { type: "string", description: "Preheader — one short, neutral, helpful sentence." },
-        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Preserve markdown bold (**like this**). Paragraphs separated by \\n\\n." },
+        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Keep it concise: 60–90 words, absolute max 100 words. 3–4 short paragraphs separated by \\n\\n. Preserve markdown bold (**like this**)." },
         cta: { type: "string", description: "CTA button label only — 2 to 4 words, strong transactional style, no emoji." },
       },
       required: ["subject", "preheader", "body", "cta"],
