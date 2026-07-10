@@ -453,7 +453,7 @@ const FRIENDLY_TOOL = {
       properties: {
         subject: { type: "string", description: "Subject Line text only — 6 to 8 words, clear and action-oriented, sounds like an account update. No emoji, no '**Subject Line:**' prefix." },
         preheader: { type: "string", description: "Preheader — one short helpful sentence." },
-        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. Very simple language, short sentences (max 15-20 words), short paragraphs (2-3 lines). Preserve markdown bold (**like this**). Paragraphs separated by \\n\\n." },
+        body: { type: "string", description: "Full email body from greeting through sign-off 'Best regards, The BitPlay Team'. 40–70 words, max 80 words. Very simple language, short sentences (max 15-20 words), short paragraphs (2-3 lines). 2–3 paragraphs separated by \\n\\n. Preserve markdown bold (**like this**)." },
         cta: { type: "string", description: "CTA button label only — 2 to 4 words, simple and clear, no emoji." },
       },
       required: ["subject", "preheader", "body", "cta"],
