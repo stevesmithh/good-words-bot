@@ -218,19 +218,19 @@ bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited,
 
 2. **Preheader** (1 short helpful sentence)
 
-3. **Email Body Structure**
+3. **Email Body Structure** (total 40–70 words; max 80 words)
 
    - Personal greeting: "Hi {{ insert first_name 'default=default' }},"
 
    - One short, warm opening line
 
-   - Clear explanation
+   - One clear explanation sentence
 
-   - Bullet points for details (keep them very simple)
+   - Optional bullet points (2–3 very simple bullets max)
 
-   - One clear CTA button
+   - One clear CTA button line
 
-   - Helpful closing
+   - Helpful closing (1 sentence)
 
    - Sign-off: "Best regards, The BitPlay Team"
 
