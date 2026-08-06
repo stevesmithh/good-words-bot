@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare, LogOut, Share2, History } from "lucide-react";
+import { Mail, MessageSquare, LogOut, Share2, History, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmailGenerator } from "@/components/EmailGenerator";
 import { SmsGenerator } from "@/components/SmsGenerator";
 import { SocialGenerator } from "@/components/SocialGenerator";
+import { DedupTool } from "@/components/DedupTool";
 import { AdminButton } from "@/components/AdminEditor";
 import { Button } from "@/components/ui/button";
 import { clearSession, getSession } from "@/lib/session";
 
-type Tab = "email" | "sms" | "social";
+type Tab = "email" | "sms" | "social" | "dedup";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -85,9 +86,21 @@ function Index() {
             <Share2 className="h-4 w-4" />
             Social
           </TabButton>
+          <TabButton active={tab === "dedup"} onClick={() => setTab("dedup")}>
+            <Users className="h-4 w-4" />
+            Dedup
+          </TabButton>
         </div>
 
-        {tab === "email" ? <EmailGenerator /> : tab === "sms" ? <SmsGenerator /> : <SocialGenerator />}
+        {tab === "email" ? (
+          <EmailGenerator />
+        ) : tab === "sms" ? (
+          <SmsGenerator />
+        ) : tab === "social" ? (
+          <SocialGenerator />
+        ) : (
+          <DedupTool />
+        )}
       </main>
     </div>
   );
