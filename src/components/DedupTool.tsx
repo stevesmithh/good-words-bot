@@ -32,6 +32,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useCatalog } from "@/lib/catalog";
 import {
   parseCsvPhones,
+  parseXlsxPhones,
+  isXlsxFile,
   runDedup,
   downloadCsv,
   type BrandResult,
@@ -105,8 +107,9 @@ export function DedupTool() {
 
   const handleFile = async (id: string, file: File) => {
     try {
-      const text = await file.text();
-      const lines = parseCsvPhones(text);
+      const lines = isXlsxFile(file)
+        ? await parseXlsxPhones(await file.arrayBuffer())
+        : parseCsvPhones(await file.text());
       setRows((prev) =>
         prev.map((r) => (r.id === id ? { ...r, fileName: file.name, rawLines: lines } : r)),
       );
@@ -153,10 +156,10 @@ export function DedupTool() {
             Cross-brand number dedup
           </CardTitle>
           <CardDescription>
-            Upload one phone-number CSV per brand. Any number that appears in more than one brand is
-            kept in whichever brand you listed first and removed from the rest, so each user is only
-            called or texted once. Everything runs in your browser — files are never uploaded
-            anywhere.
+            Upload one phone-number file per brand (CSV or Excel — .csv, .xlsx, .xls). Any number
+            that appears in more than one brand is kept in whichever brand you listed first and
+            removed from the rest, so each user is only called or texted once. Everything runs in
+            your browser — files are never uploaded anywhere.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -218,11 +221,11 @@ export function DedupTool() {
                 <span className="truncate">
                   {row.fileName
                     ? `${row.fileName} (${row.rawLines.length} number${row.rawLines.length === 1 ? "" : "s"})`
-                    : "Choose CSV file…"}
+                    : "Choose CSV or Excel file…"}
                 </span>
                 <input
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

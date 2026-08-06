@@ -39,19 +39,50 @@ export function normalizePhone(raw: string): string | null {
   return digits;
 }
 
+// Drops a leading header row (a first entry that doesn't look like a phone
+// number) from a column of candidate phone-number values.
+function dropHeaderRow(values: string[]): string[] {
+  if (values.length > 0 && !normalizePhone(values[0])) {
+    return values.slice(1);
+  }
+  return values;
+}
+
 // Splits raw CSV text into candidate phone-number lines. Only the first
-// column is used; a header row (a first line that doesn't look like a
-// phone number) is dropped automatically.
+// column is used; a header row is dropped automatically.
 export function parseCsvPhones(text: string): string[] {
   const lines = text
     .split(/\r\n|\n|\r/)
     .map((l) => l.split(",")[0]?.trim().replace(/^"|"$/g, "") ?? "")
     .filter((l) => l.length > 0);
 
-  if (lines.length > 0 && !normalizePhone(lines[0])) {
-    return lines.slice(1);
-  }
-  return lines;
+  return dropHeaderRow(lines);
+}
+
+// Parses an .xlsx/.xls workbook and returns the first column of its first
+// sheet as candidate phone-number values. Loads the SheetJS library on
+// demand so it doesn't bloat the main bundle for users who only use CSV.
+export async function parseXlsxPhones(data: ArrayBuffer): Promise<string[]> {
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(data, { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) return [];
+  const sheet = workbook.Sheets[firstSheetName];
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: false,
+    blankrows: false,
+  });
+
+  const values = rows
+    .map((row) => (Array.isArray(row) && row[0] != null ? String(row[0]).trim() : ""))
+    .filter((v) => v.length > 0);
+
+  return dropHeaderRow(values);
+}
+
+export function isXlsxFile(file: File): boolean {
+  return /\.(xlsx|xls)$/i.test(file.name);
 }
 
 // Runs the cross-brand dedup. `files` order is priority order — the first
