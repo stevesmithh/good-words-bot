@@ -1,0 +1,1 @@
+CREATE POLICY "No public access to storage objects" ON storage.objects FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
