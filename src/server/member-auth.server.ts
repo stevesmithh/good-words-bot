@@ -25,7 +25,8 @@ type Creds = { username?: unknown; password?: unknown };
  * Returns the member row on success, or null when unauthorized.
  * Legacy plaintext passwords are auto-upgraded to bcrypt on match.
  */
-export async function verifyMemberCreds(body: Creds) {
+export async function verifyMemberCreds(raw: unknown) {
+  const body = (raw ?? {}) as Creds;
   const username = typeof body.username === "string" ? body.username : "";
   const password = typeof body.password === "string" ? body.password : "";
   if (!username || !password || username.length > 100 || password.length > 200) return null;
