@@ -199,6 +199,7 @@ export function SmsGenerator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...authFields(),
           action: "get-or-create",
           promotionId,
           provider,
@@ -222,6 +223,7 @@ export function SmsGenerator() {
 
       // 2. Generate the SMS using that short link as the CTA
       const payload: Record<string, unknown> = {
+        ...authFields(),
         smsType,
         offerDetails,
         audience,
@@ -288,7 +290,7 @@ export function SmsGenerator() {
       const resp = await fetch("/api/shortio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "mark-used", linkId: shortLink.linkId }),
+        body: JSON.stringify({ ...authFields(), action: "mark-used", linkId: shortLink.linkId }),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {

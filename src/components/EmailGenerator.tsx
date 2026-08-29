@@ -111,6 +111,7 @@ export function EmailGenerator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...authFields(),
           inboxType,
           offerDetails,
           audience,

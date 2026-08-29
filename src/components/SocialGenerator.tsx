@@ -159,8 +159,9 @@ export function SocialGenerator() {
     try {
       const shortBody =
         linkMode === "ready"
-          ? { action: "ready" as const, promotionId }
+          ? { ...authFields(), action: "ready" as const, promotionId }
           : {
+              ...authFields(),
               action: "manual" as const,
               siteId,
               destinationUrl: manualUrl.trim(),
@@ -185,6 +186,7 @@ export function SocialGenerator() {
         linkMode === "ready" ? selectedPromotion?.name : manualLabel.trim();
 
       const payload = {
+        ...authFields(),
         siteId: siteId || undefined,
         brandName: siteId || undefined,
         promotionName,
