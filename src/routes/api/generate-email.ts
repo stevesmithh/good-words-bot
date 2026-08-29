@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SPAM_CATEGORIES, SAFE_REPLACEMENTS, type SpamCategoryId } from "@/lib/spam-words";
 import { callClaudeWithTool } from "@/server/anthropic.server";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
@@ -475,6 +476,8 @@ export const Route = createFileRoute("/api/generate-email")({
             activeCategories: SpamCategoryId[];
             inboxType?: InboxType;
           };
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
 
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });

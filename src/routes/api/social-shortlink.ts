@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 
-type ReadyBody = {
+type AuthFields = { username?: string; password?: string };
+
+type ReadyBody = AuthFields & {
   action: "ready";
   promotionId: string;
 };
 
-type ManualBody = {
+type ManualBody = AuthFields & {
   action: "manual";
   siteId: string;
   destinationUrl: string;
@@ -82,6 +85,9 @@ export const Route = createFileRoute("/api/social-shortlink")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
+
           const apiKey = process.env.SHORTIO_API_KEY;
           if (!apiKey) {
             return Response.json({ error: "SHORTIO_API_KEY is not configured" }, { status: 500 });

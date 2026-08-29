@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
   SMS_SPAM_CATEGORIES,
   SMS_SAFE_REPLACEMENTS,
@@ -477,6 +478,8 @@ export const Route = createFileRoute("/api/generate-sms")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as SmsBody;
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
 
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });

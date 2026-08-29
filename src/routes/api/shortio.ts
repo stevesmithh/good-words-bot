@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 
-type GetOrCreateBody = {
+type AuthFields = { username?: string; password?: string };
+
+type GetOrCreateBody = AuthFields & {
   action: "get-or-create";
   promotionId: string;
   provider: string;
 };
 
-type MarkUsedBody = {
+type MarkUsedBody = AuthFields & {
   action: "mark-used";
   linkId: string;
 };
@@ -88,6 +91,8 @@ export const Route = createFileRoute("/api/shortio")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
 
           if (body.action === "mark-used") {
             if (!body.linkId || typeof body.linkId !== "string") {

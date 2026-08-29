@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
   PLATFORM_POLICIES,
   SOCIAL_PLATFORMS,
@@ -448,6 +449,8 @@ export const Route = createFileRoute("/api/generate-social")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as SocialBody;
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
 
           if (!body.tone || !VALID_TONES.includes(body.tone)) {
             return Response.json({ error: "Tone is required (promotional, friendly, or informational)." }, { status: 400 });

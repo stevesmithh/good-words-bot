@@ -24,3 +24,9 @@ export function setSession(s: TeamSession) {
 export function clearSession() {
   localStorage.removeItem(KEY);
 }
+
+// Credentials to merge into API request bodies for authenticated endpoints.
+export function authFields(): { username: string; password: string } {
+  const s = getSession();
+  return { username: s?.username ?? "", password: s?.password ?? "" };
+}
