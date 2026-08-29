@@ -449,6 +449,8 @@ export const Route = createFileRoute("/api/generate-social")({
         try {
           const body = (await request.json()) as SocialBody;
 
+          if (!(await verifyMemberCreds(body))) return unauthorized();
+
           if (!body.tone || !VALID_TONES.includes(body.tone)) {
             return Response.json({ error: "Tone is required (promotional, friendly, or informational)." }, { status: 400 });
           }

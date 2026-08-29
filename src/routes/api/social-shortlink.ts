@@ -82,6 +82,9 @@ export const Route = createFileRoute("/api/social-shortlink")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as Body;
+
+          if (!(await verifyMemberCreds(body))) return unauthorized();
+
           const apiKey = process.env.SHORTIO_API_KEY;
           if (!apiKey) {
             return Response.json({ error: "SHORTIO_API_KEY is not configured" }, { status: 500 });

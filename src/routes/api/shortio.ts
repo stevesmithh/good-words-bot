@@ -89,6 +89,8 @@ export const Route = createFileRoute("/api/shortio")({
         try {
           const body = (await request.json()) as Body;
 
+          if (!(await verifyMemberCreds(body))) return unauthorized();
+
           if (body.action === "mark-used") {
             if (!body.linkId || typeof body.linkId !== "string") {
               return Response.json({ error: "linkId is required" }, { status: 400 });

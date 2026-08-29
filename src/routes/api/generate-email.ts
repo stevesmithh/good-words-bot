@@ -476,6 +476,8 @@ export const Route = createFileRoute("/api/generate-email")({
             inboxType?: InboxType;
           };
 
+          if (!(await verifyMemberCreds(body))) return unauthorized();
+
           if (!body.offerDetails || !body.offerDetails.trim()) {
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
