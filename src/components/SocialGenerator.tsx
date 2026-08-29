@@ -54,6 +54,7 @@ import {
 } from "@/lib/social-compliance";
 import { useCatalog } from "@/lib/catalog";
 import { logGeneration, logHistory } from "@/lib/usage";
+import { authFields } from "@/lib/session";
 
 type VariantOut = {
   copy: string;

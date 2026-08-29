@@ -33,6 +33,7 @@ import {
 } from "@/lib/sms-spam-words";
 import { useCatalog } from "@/lib/catalog";
 import { logGeneration, logHistory } from "@/lib/usage";
+import { authFields } from "@/lib/session";
 
 type SiteId = string;
 type SmsProvider = string;

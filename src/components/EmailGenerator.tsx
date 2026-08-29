@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
 import { logGeneration, logHistory } from "@/lib/usage";
+import { authFields } from "@/lib/session";
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
