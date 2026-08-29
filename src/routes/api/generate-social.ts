@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
   PLATFORM_POLICIES,
   SOCIAL_PLATFORMS,

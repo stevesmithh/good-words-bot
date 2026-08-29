@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
   SMS_SPAM_CATEGORIES,
   SMS_SAFE_REPLACEMENTS,

@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 
-type ReadyBody = {
+type AuthFields = { username?: string; password?: string };
+
+type ReadyBody = AuthFields & {
   action: "ready";
   promotionId: string;
 };
 
-type ManualBody = {
+type ManualBody = AuthFields & {
   action: "manual";
   siteId: string;
   destinationUrl: string;
