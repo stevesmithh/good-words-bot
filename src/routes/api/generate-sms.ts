@@ -194,8 +194,30 @@ function validateNoSpamUniqueness(texts: string[], comparisonPool: string[]): { 
   return { ok: true };
 }
 
+export function smsSourceParts(body: SmsBody): Array<string | undefined> {
+  return [
+    body.offerDetails,
+    body.brandName,
+    body.ctaLink,
+    body.couponCode,
+    body.promoCode,
+    body.bonusDescription,
+    body.bonusAmount,
+    body.freePlayReward,
+    body.depositOrdinal,
+  ];
+}
+
+function collectSmsTexts(args: unknown): string[] {
+  if (!args || typeof args !== "object") return [];
+  return Object.values(args as Record<string, unknown>).filter(
+    (v): v is string => typeof v === "string",
+  );
+}
+
 async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], tool: AiTool): Promise<AiResult> {
   const rejected: string[] = [];
+  let factNote = "";
   let lastFailure: AiResult = {
     ok: false,
     status: 502,
@@ -214,7 +236,7 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
       buildPrompt(
         { ...body, smsType: "non_spam" },
         { seedBlock: renderNoSpamSeedBlock(makeNoSpamSeed()), recentBlock },
-      ),
+      ) + factNote,
       tool,
       { temperature, top_p: 0.9 },
     );
@@ -225,6 +247,18 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
     }
 
     const texts = collectNoSpamTexts(result.args);
+
+    const invented = findInventedFacts(texts.join("\n"), smsSourceParts(body));
+    if (hasInventedFacts(invented)) {
+      factNote = "\n" + inventedFactsNote(invented);
+      lastFailure = {
+        ok: false,
+        status: 409,
+        error: "Generated no-spam variants contained invented details.",
+      };
+      continue;
+    }
+
     const uniqueness = validateNoSpamUniqueness(texts, [...recentNospam, ...rejected]);
     if (uniqueness.ok) {
       return result;
@@ -241,6 +275,7 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
 
   return lastFailure;
 }
+
 
 function buildPrompt(input: SmsBody, extras: PromptExtras = {}) {
 
