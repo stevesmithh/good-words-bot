@@ -525,7 +525,7 @@ export const Route = createFileRoute("/api/generate-email")({
                 ? FRIENDLY_TOOL
                 : PROMOTIONAL_TOOL;
 
-          const result = await callClaudeWithTool(prompt, tool);
+          const result = await callClaudeWithTool(prompt, tool, { temperature: 0.4 });
           if (!result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
