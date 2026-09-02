@@ -38,11 +38,15 @@ export async function callClaudeWithTool(
     input_schema: tool.function.parameters,
   };
 
+  // Match the previous gateway behaviour: a controlled default temperature so
+  // output style stays consistent (Claude defaults to 1.0, which drifted a lot).
+  const baseTemperature = options?.temperature ?? 0.45;
+
   // Try once with the requested settings; on a parse failure, retry once with
   // a lower temperature so the model produces more reliably-formatted tool args.
-  const attempts: Array<{ temperature?: number; top_p?: number }> = [
-    { temperature: options?.temperature, top_p: options?.top_p },
-    { temperature: 0.3, top_p: 0.9 },
+  const attempts: Array<{ temperature: number }> = [
+    { temperature: Math.min(baseTemperature, 1) },
+    { temperature: 0.25 },
   ];
 
   let lastFailure: AnthropicResult | null = null;
@@ -57,19 +61,16 @@ export async function callClaudeWithTool(
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2000,
+        max_tokens: 4000,
+        system:
+          "You are a precise marketing copywriter. Follow every instruction in the user message literally, especially word limits, tone rules, forbidden words, and the rule to never invent details that are not in the provided offer. Always answer by calling the provided tool with complete field values.",
         messages: [{ role: "user", content: prompt }],
         tools: [anthropicTool],
         tool_choice: { type: "tool", name: tool.function.name },
-        // Anthropic rejects sending both temperature and top_p in some cases;
-        // prefer temperature when provided.
-        ...(attempt.temperature !== undefined
-          ? { temperature: Math.min(attempt.temperature, 1) }
-          : attempt.top_p !== undefined
-            ? { top_p: attempt.top_p }
-            : {}),
+        temperature: attempt.temperature,
       }),
     });
+
 
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
