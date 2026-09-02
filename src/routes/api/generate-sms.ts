@@ -513,6 +513,8 @@ Rules for ALL six variants:
 - Noticeably different wording, sentence shape, and opener so carriers don't dedupe on bulk send.
 - Every variant must follow ALL rules above${input.ctaLink && input.ctaLink.trim() ? " and end with the link" : ""}.
 
+${NO_INVENTION_BLOCK}
+
 Return your answer using the provided tool.`;
 }
 
@@ -677,13 +679,27 @@ export const Route = createFileRoute("/api/generate-sms")({
 
           const AI_OPTS = { temperature: 0.85, top_p: 0.9 };
 
-          const stdCasualPromise = needStdCasual
-            ? callClaudeWithTool(
-                buildPrompt(body, { seedBlock: stdCasualSeedBlock, recentBlock: stdCasualRecentBlock }),
+          const stdCasualPrompt = buildPrompt(body, {
+            seedBlock: stdCasualSeedBlock,
+            recentBlock: stdCasualRecentBlock,
+          });
+          const runStdCasual = async () => {
+            let res = await callClaudeWithTool(stdCasualPrompt, SMS_TOOL, AI_OPTS);
+            // Regenerate when the model invented numbers/codes absent from the offer.
+            for (let attempt = 0; attempt < 2 && res.ok; attempt++) {
+              const invented = findInventedFacts(collectSmsTexts(res.args).join("\n"), smsSourceParts(body));
+              if (!hasInventedFacts(invented)) break;
+              const retry = await callClaudeWithTool(
+                stdCasualPrompt + "\n" + inventedFactsNote(invented),
                 SMS_TOOL,
-                AI_OPTS,
-              )
-            : Promise.resolve(null);
+                { temperature: 0.4, top_p: 0.9 },
+              );
+              if (!retry.ok) break;
+              res = retry;
+            }
+            return res;
+          };
+          const stdCasualPromise = needStdCasual ? runStdCasual() : Promise.resolve(null);
           const nospamPromise = needNospam
             ? generateDistinctNoSpam(body, recentNospam, NOSPAM_TOOL)
             : Promise.resolve(null);
