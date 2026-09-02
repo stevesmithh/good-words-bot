@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
 import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
+  findInventedFacts,
+  hasInventedFacts,
+  inventedFactsNote,
+  NO_INVENTION_BLOCK,
+} from "@/server/fact-guard.server";
+
+import {
   SMS_SPAM_CATEGORIES,
   SMS_SAFE_REPLACEMENTS,
   type SmsSpamCategoryId,
