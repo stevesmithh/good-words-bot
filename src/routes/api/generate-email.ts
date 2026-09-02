@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SPAM_CATEGORIES, SAFE_REPLACEMENTS, type SpamCategoryId } from "@/lib/spam-words";
 import { callClaudeWithTool } from "@/server/anthropic.server";
 import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
+import { findInventedFacts, hasInventedFacts, inventedFactsNote } from "@/server/fact-guard.server";
+
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
