@@ -525,7 +525,20 @@ export const Route = createFileRoute("/api/generate-email")({
                 ? FRIENDLY_TOOL
                 : PROMOTIONAL_TOOL;
 
-          const result = await callClaudeWithTool(prompt, tool, { temperature: 0.4 });
+          const sourceParts = [body.offerDetails, body.brandName];
+          let result = await callClaudeWithTool(prompt, tool, { temperature: 0.4 });
+          // Reject and regenerate copy that invents numbers/codes absent from the offer.
+          for (let attempt = 0; attempt < 2 && result.ok; attempt++) {
+            const args = result.args as Record<string, string>;
+            const combined = Object.values(args).filter((v) => typeof v === "string").join("\n");
+            const invented = findInventedFacts(combined, sourceParts);
+            if (!hasInventedFacts(invented)) break;
+            const retry = await callClaudeWithTool(prompt + "\n" + inventedFactsNote(invented), tool, {
+              temperature: 0.25,
+            });
+            if (!retry.ok) break;
+            result = retry;
+          }
           if (!result.ok) {
             return Response.json(
               { error: result.error, ...(result.details ? { details: result.details } : {}) },
@@ -533,6 +546,7 @@ export const Route = createFileRoute("/api/generate-email")({
             );
           }
           const parsed = result.args as Record<string, string>;
+
 
           const normalizeNewlines = (s: string) =>
             s
