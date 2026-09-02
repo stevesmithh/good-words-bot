@@ -430,6 +430,8 @@ ${extras.seedBlock ?? ""}
 
 ${extras.recentBlock ?? ""}
 
+${NO_INVENTION_BLOCK}
+
 Return your answer using the provided tool.`;
   }
 
