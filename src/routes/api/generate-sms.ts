@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { callClaudeWithTool } from "@/server/anthropic.server";
 import { verifyMemberCreds, unauthorized } from "@/server/member-auth.server";
 import {
+  findInventedFacts,
+  hasInventedFacts,
+  inventedFactsNote,
+  NO_INVENTION_BLOCK,
+} from "@/server/fact-guard.server";
+
+import {
   SMS_SPAM_CATEGORIES,
   SMS_SAFE_REPLACEMENTS,
   type SmsSpamCategoryId,
@@ -187,8 +194,30 @@ function validateNoSpamUniqueness(texts: string[], comparisonPool: string[]): { 
   return { ok: true };
 }
 
+export function smsSourceParts(body: SmsBody): Array<string | undefined> {
+  return [
+    body.offerDetails,
+    body.brandName,
+    body.ctaLink,
+    body.couponCode,
+    body.promoCode,
+    body.bonusDescription,
+    body.bonusAmount,
+    body.freePlayReward,
+    body.depositOrdinal,
+  ];
+}
+
+function collectSmsTexts(args: unknown): string[] {
+  if (!args || typeof args !== "object") return [];
+  return Object.values(args as Record<string, unknown>).filter(
+    (v): v is string => typeof v === "string",
+  );
+}
+
 async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], tool: AiTool): Promise<AiResult> {
   const rejected: string[] = [];
+  let factNote = "";
   let lastFailure: AiResult = {
     ok: false,
     status: 502,
@@ -207,7 +236,7 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
       buildPrompt(
         { ...body, smsType: "non_spam" },
         { seedBlock: renderNoSpamSeedBlock(makeNoSpamSeed()), recentBlock },
-      ),
+      ) + factNote,
       tool,
       { temperature, top_p: 0.9 },
     );
@@ -218,6 +247,18 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
     }
 
     const texts = collectNoSpamTexts(result.args);
+
+    const invented = findInventedFacts(texts.join("\n"), smsSourceParts(body));
+    if (hasInventedFacts(invented)) {
+      factNote = "\n" + inventedFactsNote(invented);
+      lastFailure = {
+        ok: false,
+        status: 409,
+        error: "Generated no-spam variants contained invented details.",
+      };
+      continue;
+    }
+
     const uniqueness = validateNoSpamUniqueness(texts, [...recentNospam, ...rejected]);
     if (uniqueness.ok) {
       return result;
@@ -234,6 +275,7 @@ async function generateDistinctNoSpam(body: SmsBody, recentNospam: string[], too
 
   return lastFailure;
 }
+
 
 function buildPrompt(input: SmsBody, extras: PromptExtras = {}) {
 
@@ -388,6 +430,8 @@ ${extras.seedBlock ?? ""}
 
 ${extras.recentBlock ?? ""}
 
+${NO_INVENTION_BLOCK}
+
 Return your answer using the provided tool.`;
   }
 
@@ -468,6 +512,8 @@ Rules for ALL six variants:
 - Same offer. Same code/value if applicable.
 - Noticeably different wording, sentence shape, and opener so carriers don't dedupe on bulk send.
 - Every variant must follow ALL rules above${input.ctaLink && input.ctaLink.trim() ? " and end with the link" : ""}.
+
+${NO_INVENTION_BLOCK}
 
 Return your answer using the provided tool.`;
 }
@@ -633,13 +679,27 @@ export const Route = createFileRoute("/api/generate-sms")({
 
           const AI_OPTS = { temperature: 0.85, top_p: 0.9 };
 
-          const stdCasualPromise = needStdCasual
-            ? callClaudeWithTool(
-                buildPrompt(body, { seedBlock: stdCasualSeedBlock, recentBlock: stdCasualRecentBlock }),
+          const stdCasualPrompt = buildPrompt(body, {
+            seedBlock: stdCasualSeedBlock,
+            recentBlock: stdCasualRecentBlock,
+          });
+          const runStdCasual = async () => {
+            let res = await callClaudeWithTool(stdCasualPrompt, SMS_TOOL, AI_OPTS);
+            // Regenerate when the model invented numbers/codes absent from the offer.
+            for (let attempt = 0; attempt < 2 && res.ok; attempt++) {
+              const invented = findInventedFacts(collectSmsTexts(res.args).join("\n"), smsSourceParts(body));
+              if (!hasInventedFacts(invented)) break;
+              const retry = await callClaudeWithTool(
+                stdCasualPrompt + "\n" + inventedFactsNote(invented),
                 SMS_TOOL,
-                AI_OPTS,
-              )
-            : Promise.resolve(null);
+                { temperature: 0.4, top_p: 0.9 },
+              );
+              if (!retry.ok) break;
+              res = retry;
+            }
+            return res;
+          };
+          const stdCasualPromise = needStdCasual ? runStdCasual() : Promise.resolve(null);
           const nospamPromise = needNospam
             ? generateDistinctNoSpam(body, recentNospam, NOSPAM_TOOL)
             : Promise.resolve(null);
