@@ -23,9 +23,36 @@ const AUDIENCE_TONE: Record<Audience, string> = {
 };
 
 // =====================================================================
+// TRANSACTIONAL STYLE LOCK — shared by Primary + Friendly inbox types.
+// These two modes must read like account notifications, never marketing.
+// =====================================================================
+const TRANSACTIONAL_STYLE_LOCK = `### TRANSACTIONAL STYLE LOCK (HIGHEST PRIORITY — OVERRIDES TONE HINTS)
+This email MUST read like an automated account notification from a platform the reader already uses (like a bank alert, a shipping update, or an app status message). It must NOT read like marketing in any way. If a sentence could appear in an ad, rewrite it.
+
+MANDATORY:
+- State facts. Notify, do not persuade. No selling, no hype, no enthusiasm, no emotional build-up.
+- Neutral, factual, calm voice throughout. Zero exclamation marks. Zero emojis anywhere (subject, preheader, body, CTA).
+- Subject reads like a status or task: "Your quests have been updated", "Action needed on your profile". Never a benefit promise, never a teaser, never a question designed to create curiosity.
+- Body: greeting → one plain sentence saying what changed or what is available on the account → the literal detail(s) from the offer → one plain sentence saying where to do it → sign-off. Nothing else.
+- Refer to it as an update to the reader's account/profile, not as an "offer" or "campaign".
+- CTA button is a neutral system action: "View Details", "Open Your Profile", "View Update", "Continue Setup". Never "Claim", "Get", "Start Winning", "Grab", "Don't Miss".
+
+BANNED MARKETING PATTERNS (never use any of these):
+- Hype/benefit adjectives: exciting, amazing, incredible, huge, massive, big, awesome, great news, good news, best, ultimate, epic, insane, unbeatable, must-see.
+- Persuasion openers: "Great news!", "Guess what", "You're going to love", "We're thrilled", "We're excited", "Ready to…", "Imagine…", "Don't miss".
+- Urgency/scarcity: hurry, now, today only, last chance, ends soon, limited, while it lasts, act fast, running out.
+- Sales framing: offer, deal, promo, promotion, campaign, special, exclusive, bonus, reward, prize, gift, free, claim, unlock, boost, win, earn.
+- Curiosity/clickbait subjects, teasers, ellipses ("…"), and rhetorical questions.
+- Superlatives, ALL CAPS words, repeated punctuation (!!, ??), and marketing sign-offs like "Happy playing!" or "Let's go!".
+
+STYLE CHECK BEFORE YOU ANSWER:
+Reread your draft. If it sounds like a brand talking to a customer, it is wrong — rewrite it so it sounds like the system informing an account holder. Shorter and flatter is always safer.`;
+
+// =====================================================================
 // PRIMARY INBOX PROMPT — keep concise, scannable, and under 100 words.
 // Edit only when the user requests copy length/tone changes.
 // =====================================================================
+
 const PRIMARY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
 
 Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
