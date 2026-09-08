@@ -302,6 +302,10 @@ function buildFriendlyPrompt(input: {
 ${audienceLine}
 ${brandLine}
 
+${TRANSACTIONAL_STYLE_LOCK}
+
+
+
 ### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
 - Use ONLY facts that are explicitly written in the offer details above.
 - DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
