@@ -562,7 +562,9 @@ export const Route = createFileRoute("/api/generate-email")({
                 : PROMOTIONAL_TOOL;
 
           const sourceParts = [body.offerDetails, body.brandName];
-          let result = await callClaudeWithTool(prompt, tool, { temperature: 0.4 });
+          // Primary/Friendly must stay strictly transactional — keep sampling low.
+          const baseTemp = inboxType === "promotional" ? 0.4 : 0.2;
+          let result = await callClaudeWithTool(prompt, tool, { temperature: baseTemp });
           // Reject and regenerate copy that invents numbers/codes absent from the offer.
           for (let attempt = 0; attempt < 2 && result.ok; attempt++) {
             const args = result.args as Record<string, string>;
