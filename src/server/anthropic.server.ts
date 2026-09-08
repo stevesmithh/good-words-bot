@@ -89,6 +89,7 @@ export async function callClaudeWithTool(
         };
       }
       if (resp.status === 401 || resp.status === 403) {
+        console.error("[anthropic] auth rejected", resp.status, errText.slice(0, 300));
         return {
           ok: false,
           status: resp.status,
@@ -96,6 +97,7 @@ export async function callClaudeWithTool(
           details: errText,
         };
       }
+
       lastFailure = {
         ok: false,
         status: resp.status,
