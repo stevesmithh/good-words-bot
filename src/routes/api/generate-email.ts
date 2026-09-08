@@ -49,303 +49,122 @@ STYLE CHECK BEFORE YOU ANSWER:
 Reread your draft. If it sounds like a brand talking to a customer, it is wrong — rewrite it so it sounds like the system informing an account holder. Shorter and flatter is always safer.`;
 
 // =====================================================================
-// PRIMARY INBOX PROMPT — keep concise, scannable, and under 100 words.
-// Edit only when the user requests copy length/tone changes.
+// PRIMARY + FRIENDLY: pure system-notification writer. No marketing
+// persona, no engagement goals — only factual account notices.
 // =====================================================================
 
-const PRIMARY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
+const NOTIFICATION_WRITER_ROLE = `You are the automated notification system of a software platform. You are NOT a marketer, NOT a copywriter, and NOT a brand voice. You write only factual account notices, the same way a bank alert, a shipping status update, or a password-change notice is written.
 
-Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
+Your only job: tell the account holder what changed or what is now available, using only the literal facts given, then point them to where it is. Nothing more.
 
-### STRICT PHILOSOPHY (Never Break These Rules)
+NEVER include: an opening compliment or warm-up line, a thank-you, a benefit statement, an invitation, encouragement, enthusiasm, storytelling, questions, teasers, emojis, exclamation marks, or any word that appears in advertising.
 
-- Primary inbox > Promotions tab. Always prioritize deliverability.
+FORBIDDEN WORDS AND PHRASES (never output any of these):
+bonus, free, instant, claim, win, earn, reward, prize, gift, offer, deal, promo, promotion, campaign, special, exclusive, limited, hurry, act now, don't miss, last chance, ends soon, exciting, excited, thrilled, amazing, incredible, great news, good news, best, ultimate, epic, huge, massive, unlock, boost, jackpot, enjoy, ready to, love, favourite, favorite, celebrate, treat, surprise, sit back, dive in, let's, happy playing.`;
 
-- Sound like a helpful system message from a trusted platform (bank, SaaS tool, or gaming account).
+const NOTIFICATION_SHAPE = (words: string) => `### REQUIRED SHAPE (follow line by line, nothing extra)
+1. Greeting: "Hi {{ insert first_name 'default=default' }},"
+2. One sentence stating plainly what changed or is now available on the account. Start with "Your", "The", or a neutral verb — never with a compliment or "Great news".
+3. One or two sentences containing the literal facts from the details (amounts, codes, conditions), copied character-for-character. Bold numbers and codes with **markdown**. Bullets allowed (max 3, plain factual lines).
+4. One sentence saying where the reader can see or do it.
+5. Sign-off on its own lines: "Best regards," then the team name.
 
-- Never sound like marketing or sales.
+Total body length: ${words}. No extra sentences. If a required fact is missing from the details, leave that part out.
 
-- Clarity beats persuasion.
+### SUBJECT LINE
+- 4–8 words, reads like a status or a task, present/past tense statement.
+- Good: "Your referral program is now active", "Action needed on your profile", "Your quest list has been updated".
+- Bad (never): anything with a benefit, a number promise, a question, an ellipsis, or a verb like Claim/Get/Grab/Start.
 
-- Short, scannable, and respectful of the reader's time.
+### PREHEADER
+One short neutral factual sentence. No selling.
 
-### FORBIDDEN WORDS & PHRASES (Completely Avoid)
+### CTA BUTTON
+Neutral system action only: "View Details", "Open Your Profile", "View Update", "Continue Setup", "Open Settings". Never Claim/Get/Start/Grab/Join.
 
-bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
+### WORKED EXAMPLE (match this register exactly)
+Subject: Your referral program is now active
+Preheader: You can now share your code from your profile.
+Body:
+Hi {{ insert first_name 'default=default' }},
 
-### ALWAYS FOLLOW THIS EXACT STRUCTURE
+Referral access has been added to your profile. You can share your code with new users.
 
-1. **Subject Line**  
+When someone registers with your code and deposits **$10** or more, both profiles receive **$10** in play credit. There is no limit on referrals.
 
-   - Maximum 6-8 words  
+Your code is listed in your profile settings.
 
-   - Action-oriented or account-focused  
+Best regards,
+The VegasGems Team
+CTA: Open Your Profile`;
 
-   - Sounds like a task or update  
+function buildNotificationPrompt(input: {
+  offerDetails: string;
+  brandName?: string;
+  variant: "primary" | "friendly";
+  toolName: string;
+}) {
+  const words =
+    input.variant === "primary"
+      ? "60–90 words, absolute maximum 100"
+      : "40–70 words, absolute maximum 80 words, using very simple everyday language and sentences under 18 words";
 
-   - Examples: "New quests available on your account", "Complete your BitPlay registration"
+  const brandLine = input.brandName
+    ? `Team name for the sign-off: The ${input.brandName} Team.`
+    : `Team name for the sign-off: use the brand named in the details, or "The Team" if none is given.`;
 
-2. **Preheader** (1 short sentence)  
+  return `${NOTIFICATION_WRITER_ROLE}
 
-   - What appears after the subject in the inbox preview  
+${NOTIFICATION_SHAPE(words)}
 
-   - Helpful and neutral
+${brandLine}
 
-3. **Email Body Structure** (total 60–90 words; absolute maximum 100 words)
+${TRANSACTIONAL_STYLE_LOCK}
 
-   - Personal greeting: "Hi {{ insert first_name 'default=default' }}," or "Hi [First Name],"
+### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
+- Use ONLY facts explicitly written in the details below.
+- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present: numbers, amounts, percentages, dates, deadlines, expiry times, product names, game names, tier/level names, codes, minimum deposits, wagering rules, regions, currencies, partner names, statistics, social proof.
+- If something is not in the details, OMIT it. Never guess, never use plausible placeholders.
+- If the details are short or vague, the email must also be short.
+- Names, numbers, and codes are copied character-for-character.
 
-   - One warm but calm opening line (1 sentence)
+### FINAL SELF-CHECK BEFORE ANSWERING
+Reread your draft and delete: any sentence that praises, invites, encourages, or sells; any adjective that is not needed to state a fact; any exclamation mark or emoji; any forbidden word. If the draft could appear in an advertisement, rewrite it flatter.
 
-   - Clear, one-sentence explanation of what happened or what to do
+### DETAILS TO NOTIFY ABOUT
+${input.offerDetails}
 
-   - Optional bullet points (2–3 short bullets max)
-
-   - One clear CTA sentence with the button label
-
-   - Soft helpful closing (1 sentence)
-
-   - Sign-off: "Best regards, The BitPlay Team"
-
-### TONE GUIDELINES
-
-- Calm, professional, friendly, and trustworthy
-
-- Conversational but not casual
-
-- Helpful mentor style rather than salesperson
-
-- Use short sentences and short paragraphs
-
-- Make it feel personal and human
-
-### ADVANCED TECHNIQUES YOU MUST USE
-
-- Personalize with first name naturally
-
-- Bold important elements (**$20**, **JOINUS**, numbers, button text)
-
-- Create logical flow: Thank you → What's new → What to do next → Help
-
-- Make the CTA feel like the natural next step
-
-- Keep the body strictly under 100 words so it is readable in under 15 seconds on mobile
-
-- Use 3–4 short paragraphs separated by blank lines; no long block of text
-
-- Use whitespace generously
-
-### OUTPUT FORMAT (Always use exactly this format)
-
-**Subject Line:**  
-
-[Your subject here]
-
-**Preheader:**  
-
-[Your preheader here]
-
-**Email Body:**
-
-[Full email with proper line breaks and markdown for bold if needed]
-
----
-
-Now, using all the rules above, create a high-quality email for the following details:
-
-[USER'S OFFER DETAILS GO HERE]`;
+IMPORTANT: Return your answer by calling the provided tool "${input.toolName}" with these fields:
+- subject: the subject line text only (4–8 words, no prefix, no emoji).
+- preheader: one short neutral factual sentence.
+- body: the body from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line, preheader, or the CTA button label inside the body.
+- cta: the neutral CTA button label only, 2–4 words. No emojis.`;
+}
 
 function buildPrimaryPrompt(input: {
   offerDetails: string;
   audience: Audience;
   brandName?: string;
 }) {
-  // Insert the offer details ONLY at the placeholder. Nothing else in the
-  // template changes.
-  const filled = PRIMARY_INBOX_PROMPT_TEMPLATE.replace(
-    "[USER'S OFFER DETAILS GO HERE]",
-    input.offerDetails,
-  );
-
-  const brandLine = input.brandName
-    ? `Brand name to use in the sign-off (replace "BitPlay" / "The BitPlay Team" with this brand): ${input.brandName}`
-    : "";
-  const audienceLine = `Audience context: ${AUDIENCE_LABEL[input.audience]}. Tone hint: ${AUDIENCE_TONE[input.audience]}`;
-
-  // Append a small instruction so the model returns structured fields via tool-calling.
-  return `${filled}
-
-${audienceLine}
-${brandLine}
-
-${TRANSACTIONAL_STYLE_LOCK}
-
-
-### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
-- Use ONLY facts that are explicitly written in the offer details above.
-- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
-- Forbidden fabrications include (but are not limited to): numbers, amounts, percentages, dollar values, dates, deadlines, expiry times, product names, game names, tier names, level names, codes, promo codes, bonus names, eligibility rules, minimum deposits, wagering requirements, regions, currencies, brand references, partner names, statistics ("over 1000 players…"), social proof, testimonials.
-- If a piece of information is not in the offer, OMIT it. Do NOT guess. Do NOT use plausible-sounding placeholders.
-- If the offer is short or vague, the email must also be short. Better to write less than to invent.
-- Names, numbers, and codes must be copied character-for-character from the offer details. Do not reformat or "improve" them.
-
-IMPORTANT: Return your answer by calling the provided tool "return_primary_email" with these fields:
-- subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
-- preheader: the Preheader text only (one short neutral sentence).
-- body: the full Email Body starting from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — the button label itself goes in the cta field.
-- cta: the CTA button label only, 2–4 words, strong and clear (e.g. "View Your Account", "Complete Registration", "Open Quests"). No emojis.`;
-
+  return buildNotificationPrompt({
+    offerDetails: input.offerDetails,
+    brandName: input.brandName,
+    variant: "primary",
+    toolName: "return_primary_email",
+  });
 }
-
-// =====================================================================
-// FRIENDLY INBOX PROMPT — very short, everyday language, 40–70 words.
-// Edit only when the user requests copy length/tone changes.
-// =====================================================================
-const FRIENDLY_INBOX_PROMPT_TEMPLATE = `You are an elite Email Strategist & Deliverability Expert with 10+ years of experience crafting emails that land in the Primary inbox while maintaining high engagement.
-
-Your specialty is transforming any promotional or marketing information into clean, professional, transactional-style emails that feel like legitimate account notifications.
-
-### STRICT PHILOSOPHY (Never Break These Rules)
-
-- Primary inbox is the highest priority.
-
-- Sound like a helpful system/account message (like from a bank or useful app).
-
-- Never sound like marketing or sales.
-
-- Clarity is more important than persuasion.
-
-### FORBIDDEN WORDS & PHRASES (Completely Avoid)
-
-bonus, free, instant, claim, win, earn, reward, offer, deal, exclusive, limited, hurry, act now, don't miss, exciting, amazing, best, special, today only, unlock, boost, jackpot, massive
-
-### NEW IMPORTANT RULE - EXTREME SIMPLICITY & SHORT LENGTH
-
-- Use very simple, everyday words.
-
-- Write like you are explaining to a 15-year-old student.
-
-- Use short sentences (maximum 15-20 words per sentence).
-
-- Use short paragraphs (2-3 lines max).
-
-- Make the email extremely easy to read and understand in under 10 seconds.
-
-- Total body length: 40–70 words. Absolute maximum 80 words.
-
-- Avoid complex words. Use simple alternatives.
-
-- Make the message crystal clear so anyone can understand it immediately.
-
-- Include only the greeting, one opener, one key detail, one short CTA line, and the sign-off.
-
-### ALWAYS FOLLOW THIS EXACT STRUCTURE
-
-1. **Subject Line**
-
-   - Maximum 6-8 words
-
-   - Clear and action-oriented
-
-   - Sounds like an account update
-
-2. **Preheader** (1 short helpful sentence)
-
-3. **Email Body Structure** (total 40–70 words; max 80 words)
-
-   - Personal greeting: "Hi {{ insert first_name 'default=default' }},"
-
-   - One short, warm opening line
-
-   - One clear explanation sentence
-
-   - Optional bullet points (2–3 very simple bullets max)
-
-   - One clear CTA button line
-
-   - Helpful closing (1 sentence)
-
-   - Sign-off: "Best regards, The BitPlay Team"
-
-### TONE GUIDELINES
-
-- Calm, friendly, and helpful
-
-- Very easy and natural language
-
-- Like talking to a friend who needs clear instructions
-
-### ADVANCED TECHNIQUES YOU MUST USE
-
-- Personalize with first name
-
-- Use bold for important numbers or codes (**$20**, **JOINUS**)
-
-- Create very clear flow: Thank you → What is new → What to do next
-
-- Make sure even a tired person can understand the email quickly
-
-- Keep total body strictly between 40–70 words; never over 80 words
-
-- Use 2–3 short paragraphs only
-
-### OUTPUT FORMAT (Always use exactly this format)
-
-**Subject Line:**
-
-[Your subject here]
-
-**Preheader:**
-
-[Your preheader here]
-
-**Email Body:**
-
-[Full email with proper line breaks and markdown for bold]
-
----
-
-Now, using all the rules above, create a high-quality, very easy-to-read email for the details I provide.
-
-[USER'S OFFER DETAILS GO HERE]`;
 
 function buildFriendlyPrompt(input: {
   offerDetails: string;
   audience: Audience;
   brandName?: string;
 }) {
-  const filled = FRIENDLY_INBOX_PROMPT_TEMPLATE.replace(
-    "[USER'S OFFER DETAILS GO HERE]",
-    input.offerDetails,
-  );
-
-  const brandLine = input.brandName
-    ? `Brand name to use in the sign-off (replace "BitPlay" / "The BitPlay Team" with this brand): ${input.brandName}`
-    : "";
-  const audienceLine = `Audience context: ${AUDIENCE_LABEL[input.audience]}. Tone hint: ${AUDIENCE_TONE[input.audience]}`;
-
-  return `${filled}
-
-${audienceLine}
-${brandLine}
-
-${TRANSACTIONAL_STYLE_LOCK}
-
-
-
-### ABSOLUTE ANTI-HALLUCINATION RULE (HIGHEST PRIORITY — OVERRIDES EVERYTHING)
-- Use ONLY facts that are explicitly written in the offer details above.
-- DO NOT invent, assume, infer, embellish, or add ANY detail not literally present in the offer text.
-- Forbidden fabrications include: numbers, amounts, percentages, dollar values, dates, deadlines, expiry times, product names, game names, tier/level names, codes, promo codes, bonus names, eligibility rules, minimum deposits, wagering requirements, regions, currencies, partner names, statistics, social proof, testimonials.
-- If a piece of information is not in the offer, OMIT it. Never guess. Never use plausible placeholders.
-- If the offer is short or vague, the email must also be short. Better to write less than to invent.
-- Names, numbers, and codes must be copied character-for-character from the offer details.
-
-IMPORTANT: Return your answer by calling the provided tool "return_friendly_email" with these fields:
-- subject: the Subject Line text only (no "**Subject Line:**" prefix, no emoji, 6–8 words).
-- preheader: the Preheader text only (one short helpful sentence).
-- body: the full Email Body starting from the greeting through the sign-off. Preserve markdown bold (**like this**) and use blank lines (\\n\\n) between paragraphs. Do NOT include the subject line or preheader inside the body. Do NOT include the CTA button text on its own line — the button label itself goes in the cta field.
-- cta: the CTA button label only, 2–4 words, simple and clear. No emojis.`;
+  return buildNotificationPrompt({
+    offerDetails: input.offerDetails,
+    brandName: input.brandName,
+    variant: "friendly",
+    toolName: "return_friendly_email",
+  });
 }
 
 function buildPromotionalPrompt(input: {
