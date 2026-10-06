@@ -4,15 +4,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogIn } from "lucide-react";
-import { getSession, setSession } from "@/lib/session";
+import { clearSession, getSession, setSession } from "@/lib/session";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    setSignedIn(!!getSession());
-    setReady(true);
+    const s = getSession();
+    if (!s) {
+      setReady(true);
+      return;
+    }
+    // Re-verify stored credentials so removed/changed logins are signed out.
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "login", username: s.username, password: s.password }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setSession({ username: data.username, password: s.password, isAdmin: !!data.isAdmin });
+          setSignedIn(true);
+        } else if (res.status < 500) {
+          clearSession();
+        } else {
+          setSignedIn(true);
+        }
+      })
+      .catch(() => setSignedIn(true))
+      .finally(() => setReady(true));
   }, []);
 
   if (!ready) {
