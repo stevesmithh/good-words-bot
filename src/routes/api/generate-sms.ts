@@ -524,6 +524,8 @@ export const Route = createFileRoute("/api/generate-sms")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as SmsBody;
+          if (!Array.isArray(body.activeCategories)) body.activeCategories = [];
+
 
           if (!(await verifyMemberCreds(body))) return unauthorized();
 
