@@ -13,6 +13,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSocialShortlinkRouteImport } from './routes/api/social-shortlink'
 import { Route as ApiShortioRouteImport } from './routes/api/shortio'
+import { Route as ApiSheetPromosRouteImport } from './routes/api/sheet-promos'
 import { Route as ApiGenerateSocialRouteImport } from './routes/api/generate-social'
 import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
 import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
@@ -38,6 +39,11 @@ const ApiSocialShortlinkRoute = ApiSocialShortlinkRouteImport.update({
 const ApiShortioRoute = ApiShortioRouteImport.update({
   id: '/api/shortio',
   path: '/api/shortio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSheetPromosRoute = ApiSheetPromosRouteImport.update({
+  id: '/api/sheet-promos',
+  path: '/api/sheet-promos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGenerateSocialRoute = ApiGenerateSocialRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
+  '/api/sheet-promos': typeof ApiSheetPromosRoute
   '/api/shortio': typeof ApiShortioRoute
   '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
+  '/api/sheet-promos': typeof ApiSheetPromosRoute
   '/api/shortio': typeof ApiShortioRoute
   '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
+  '/api/sheet-promos': typeof ApiSheetPromosRoute
   '/api/shortio': typeof ApiShortioRoute
   '/api/social-shortlink': typeof ApiSocialShortlinkRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
+    | '/api/sheet-promos'
     | '/api/shortio'
     | '/api/social-shortlink'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
+    | '/api/sheet-promos'
     | '/api/shortio'
     | '/api/social-shortlink'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
+    | '/api/sheet-promos'
     | '/api/shortio'
     | '/api/social-shortlink'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
   ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
   ApiGenerateSocialRoute: typeof ApiGenerateSocialRoute
+  ApiSheetPromosRoute: typeof ApiSheetPromosRoute
   ApiShortioRoute: typeof ApiShortioRoute
   ApiSocialShortlinkRoute: typeof ApiSocialShortlinkRoute
 }
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/api/shortio'
       fullPath: '/api/shortio'
       preLoaderRoute: typeof ApiShortioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sheet-promos': {
+      id: '/api/sheet-promos'
+      path: '/api/sheet-promos'
+      fullPath: '/api/sheet-promos'
+      preLoaderRoute: typeof ApiSheetPromosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-social': {
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,
   ApiGenerateSmsRoute: ApiGenerateSmsRoute,
   ApiGenerateSocialRoute: ApiGenerateSocialRoute,
+  ApiSheetPromosRoute: ApiSheetPromosRoute,
   ApiShortioRoute: ApiShortioRoute,
   ApiSocialShortlinkRoute: ApiSocialShortlinkRoute,
 }
