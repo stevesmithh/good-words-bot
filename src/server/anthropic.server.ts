@@ -67,7 +67,8 @@ export async function callClaudeWithTool(
         messages: [{ role: "user", content: prompt }],
         tools: [anthropicTool],
         tool_choice: { type: "auto" },
-        temperature: attempt.temperature,
+        // Newer Claude models (e.g. claude-opus-5-5) reject the temperature field.
+        ...(/opus-5-5|opus-5\b/.test(model) ? {} : { temperature: attempt.temperature }),
       }),
     });
 
