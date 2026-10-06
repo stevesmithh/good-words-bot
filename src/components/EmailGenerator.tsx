@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { SPAM_CATEGORIES, type SpamCategoryId } from "@/lib/spam-words";
 import { logGeneration, logHistory } from "@/lib/usage";
 import { authFields } from "@/lib/session";
+import { SheetPromoPicker, buildOfferText, hasPick, type SheetPick } from "@/components/SheetPromoPicker";
 
 type Audience = "new" | "active" | "inactive";
 type InboxType = "promotional" | "primary" | "friendly";
@@ -74,6 +75,7 @@ function renderInlineBold(text: string) {
 export function EmailGenerator() {
   const [inboxType, setInboxType] = useState<InboxType>("promotional");
   const [offerDetails, setOfferDetails] = useState("");
+  const [sheetPick, setSheetPick] = useState<SheetPick>(null);
   const [audience, setAudience] = useState<Audience>("active");
   const [brandName, setBrandName] = useState("");
   const [extraForbidden, setExtraForbidden] = useState("");
@@ -97,8 +99,9 @@ export function EmailGenerator() {
   };
 
   const handleGenerate = async () => {
-    if (!offerDetails.trim()) {
-      setOfferError("Please describe the offer before generating.");
+    const offerText = buildOfferText(hasPick(sheetPick) ? sheetPick : null, offerDetails);
+    if (!offerText.trim()) {
+      setOfferError("Choose a promotion or describe the offer.");
       return;
     }
     setOfferError(null);
@@ -114,7 +117,7 @@ export function EmailGenerator() {
         body: JSON.stringify({
           ...authFields(),
           inboxType,
-          offerDetails,
+          offerDetails: offerText,
           audience,
           brandName: brandName.trim() || undefined,
           extraForbidden: extraForbidden.trim() || undefined,
@@ -137,10 +140,10 @@ export function EmailGenerator() {
       void logGeneration("email");
       void logHistory({
         kind: "email",
-        label: offerDetails.slice(0, 80),
+        label: (hasPick(sheetPick) ? `${sheetPick!.site} · ${sheetPick!.promo.name}` : offerDetails).slice(0, 80),
         input: {
           inboxType,
-          offerDetails,
+          offerDetails: offerText,
           audience,
           brandName: brandName.trim() || undefined,
           extraForbidden: extraForbidden.trim() || undefined,
@@ -252,8 +255,13 @@ export function EmailGenerator() {
           </div>
 
           <div className="space-y-2">
+            <Label>Promotion</Label>
+            <SheetPromoPicker value={sheetPick} onChange={(v) => { setSheetPick(v); if (offerError) setOfferError(null); }} />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="offer">
-              Offer <span className="text-destructive">*</span>
+              Offer details <span className="text-xs font-normal text-muted-foreground">(optional)</span>
             </Label>
             <Textarea
               id="offer"

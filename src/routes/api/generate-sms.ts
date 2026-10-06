@@ -537,8 +537,8 @@ export const Route = createFileRoute("/api/generate-sms")({
           // Length caps to prevent oversized prompt abuse
           const tooLong = (s: string | undefined, max: number) =>
             typeof s === "string" && s.length > max;
-          if (tooLong(body.offerDetails, 2000)) {
-            return Response.json({ error: "Offer details must be 2000 chars or less." }, { status: 400 });
+          if (tooLong(body.offerDetails, 5000)) {
+            return Response.json({ error: "Offer details must be 5000 chars or less." }, { status: 400 });
           }
           if (
             tooLong(body.brandName, 200) ||

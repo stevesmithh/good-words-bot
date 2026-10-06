@@ -32,6 +32,7 @@ import {
   type SmsSpamCategoryId,
 } from "@/lib/sms-spam-words";
 import { useCatalog } from "@/lib/catalog";
+import { SheetPromoPicker, buildOfferText, hasPick, type SheetPick } from "@/components/SheetPromoPicker";
 import { logGeneration, logHistory } from "@/lib/usage";
 import { authFields } from "@/lib/session";
 
@@ -93,6 +94,8 @@ function segmentInfo(text: string) {
 export function SmsGenerator() {
   const [smsType, setSmsType] = useState<SmsType>("promotional");
   const [offerDetails, setOfferDetails] = useState("");
+  const [sheetPick, setSheetPick] = useState<SheetPick>(null);
+  const offerText = buildOfferText(hasPick(sheetPick) ? sheetPick : null, offerDetails);
   const [audience, setAudience] = useState<Audience>("active");
   const [brandName, setBrandName] = useState("");
   const [lengthTarget, setLengthTarget] = useState<LengthTarget>("short");
@@ -176,7 +179,7 @@ export function SmsGenerator() {
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!offerDetails.trim()) e.offer = "Required.";
+    if (!offerText.trim()) e.offer = "Choose a promotion or describe the offer.";
     if (!promotionId) e.promotion = "Pick a promotion.";
     if (smsType === "deposit_coupon" && !couponCode.trim()) e.coupon = "Required.";
     if (smsType === "signup_promo" && !promoCode.trim()) e.promo = "Required.";
@@ -226,7 +229,7 @@ export function SmsGenerator() {
       const payload: Record<string, unknown> = {
         ...authFields(),
         smsType,
-        offerDetails,
+        offerDetails: offerText,
         audience,
         brandName: brandName.trim() || undefined,
         ctaLink: link.shortUrl,
@@ -272,8 +275,8 @@ export function SmsGenerator() {
       void logGeneration("sms");
       void logHistory({
         kind: "sms",
-        label: offerDetails.slice(0, 80),
-        input: { ...payload, offerDetails },
+        label: (hasPick(sheetPick) ? `${sheetPick!.site} · ${sheetPick!.promo.name}` : offerDetails).slice(0, 80),
+        input: { ...payload, offerDetails: offerText },
         output: data,
       });
     } catch (err) {
@@ -545,8 +548,13 @@ export function SmsGenerator() {
 
 
           <div className="space-y-2">
+            <Label>Promotion from sheet</Label>
+            <SheetPromoPicker value={sheetPick} onChange={(v) => { setSheetPick(v); if (errors.offer) setErrors({ ...errors, offer: "" }); }} />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="smsOffer">
-              Offer details <span className="text-destructive">*</span>
+              Offer details <span className="text-xs font-normal text-muted-foreground">(optional)</span>
             </Label>
             <Textarea
               id="smsOffer"

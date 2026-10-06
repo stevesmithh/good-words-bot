@@ -338,8 +338,8 @@ export const Route = createFileRoute("/api/generate-email")({
             return Response.json({ error: "Offer details are required." }, { status: 400 });
           }
 
-          if (body.offerDetails.length > 2000) {
-            return Response.json({ error: "Offer details must be 2000 chars or less." }, { status: 400 });
+          if (body.offerDetails.length > 5000) {
+            return Response.json({ error: "Offer details must be 5000 chars or less." }, { status: 400 });
           }
           if (
             (body.brandName && body.brandName.length > 200) ||
