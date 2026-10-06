@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { getSession } from "@/lib/session";
 
 export type Site = {
@@ -55,21 +54,24 @@ async function fetchProviders(): Promise<Provider[]> {
   }
 }
 
+async function fetchSitesAndPromos(): Promise<{ sites: Site[]; promotions: Promotion[] }> {
+  const sess = getSession();
+  if (!sess) return { sites: [], promotions: [] };
+  const res = await fetch("/api/catalog", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: sess.username, password: sess.password }),
+  });
+  if (!res.ok) throw new Error(`Could not load catalog (${res.status})`);
+  return res.json();
+}
+
 async function fetchCatalog(): Promise<Catalog> {
-  const [sitesRes, promosRes, providers] = await Promise.all([
-    supabase.from("sites").select("*").order("sort_order"),
-    supabase.from("promotions").select("*").order("sort_order"),
+  const [{ sites, promotions }, providers] = await Promise.all([
+    fetchSitesAndPromos(),
     fetchProviders(),
   ]);
-
-  if (sitesRes.error) throw sitesRes.error;
-  if (promosRes.error) throw promosRes.error;
-
-  return {
-    sites: (sitesRes.data ?? []) as Site[],
-    promotions: (promosRes.data ?? []) as Promotion[],
-    providers,
-  };
+  return { sites, promotions, providers };
 }
 
 export function useCatalog() {
