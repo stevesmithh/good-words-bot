@@ -1,5 +1,5 @@
-// Server-only helper for calling the Anthropic Claude API with tool use.
-// All generation in this project runs through Anthropic (no Lovable AI credits).
+// Server-only helper for AI generation via the Lovable AI Gateway.
+// All generation in this project runs through Lovable AI (no external API key needed).
 
 export type OpenAITool = {
   type: "function";
@@ -14,15 +14,15 @@ export type AnthropicResult =
   | { ok: true; args: Record<string, unknown> }
   | { ok: false; status: number; error: string; details?: string };
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_MODEL = "claude-opus-5-5";
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 
 export async function callClaudeWithTool(
   prompt: string,
   tool: OpenAITool,
   options?: { temperature?: number; top_p?: number },
 ): Promise<AnthropicResult> {
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) {
     return {
       ok: false,
@@ -30,16 +30,8 @@ export async function callClaudeWithTool(
       error: "AI is not configured. Missing API key.",
     };
   }
-  const model = process.env["ANTHROPIC_MODEL"] || DEFAULT_MODEL;
+  const model = process.env["AI_MODEL"] || DEFAULT_MODEL;
 
-  const anthropicTool = {
-    name: tool.function.name,
-    description: tool.function.description,
-    input_schema: tool.function.parameters,
-  };
-
-  // Match the previous gateway behaviour: a controlled default temperature so
-  // output style stays consistent (Claude defaults to 1.0, which drifted a lot).
   const baseTemperature = options?.temperature ?? 0.45;
 
   // Try once with the requested settings; on a parse failure, retry once with
@@ -52,26 +44,27 @@ export async function callClaudeWithTool(
   let lastFailure: AnthropicResult | null = null;
 
   for (const attempt of attempts) {
-    const resp = await fetch(ANTHROPIC_URL, {
+    const resp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model,
-        max_tokens: 4000,
-        system:
-          "You are a precise marketing copywriter. Follow every instruction in the user message literally, especially word limits, tone rules, forbidden words, and the rule to never invent details that are not in the provided offer. Always answer by calling the provided tool with complete field values.",
-        messages: [{ role: "user", content: prompt }],
-        tools: [anthropicTool],
-        tool_choice: { type: "auto" },
-        // Newer Claude models (e.g. claude-opus-5-5) reject the temperature field.
-        ...(/opus-5-5|opus-5\b/.test(model) ? {} : { temperature: attempt.temperature }),
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a precise marketing copywriter. Follow every instruction in the user message literally, especially word limits, tone rules, forbidden words, and the rule to never invent details that are not in the provided offer. Always answer by calling the provided tool with complete field values.",
+          },
+          { role: "user", content: prompt },
+        ],
+        tools: [tool],
+        tool_choice: { type: "function", function: { name: tool.function.name } },
+        temperature: attempt.temperature,
       }),
     });
-
 
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
@@ -82,15 +75,15 @@ export async function callClaudeWithTool(
           error: "Rate limit reached. Please wait a moment and try again.",
         };
       }
-      if (resp.status === 400 && /credit|billing/i.test(errText)) {
+      if (resp.status === 402 || (resp.status === 400 && /credit|billing/i.test(errText))) {
         return {
           ok: false,
           status: 402,
-          error: "AI credits finished. Please top up the API account.",
+          error: "AI credits finished. Please top up to continue.",
         };
       }
       if (resp.status === 401 || resp.status === 403) {
-        console.error("[anthropic] auth rejected", resp.status, errText.slice(0, 300));
+        console.error("[ai-gateway] auth rejected", resp.status, errText.slice(0, 300));
         return {
           ok: false,
           status: resp.status,
@@ -109,23 +102,31 @@ export async function callClaudeWithTool(
     }
 
     const data = (await resp.json()) as {
-      content?: Array<{
-        type?: string;
-        name?: string;
-        input?: Record<string, unknown>;
-        text?: string;
+      choices?: Array<{
+        message?: {
+          tool_calls?: Array<{
+            function?: { name?: string; arguments?: string };
+          }>;
+          content?: string | null;
+        };
       }>;
     };
 
-    const call = data.content?.find(
-      (b) => b.type === "tool_use" && b.name === tool.function.name,
+    const message = data.choices?.[0]?.message;
+    const toolCall = message?.tool_calls?.find(
+      (c) => c.function?.name === tool.function.name,
     );
 
-    if (call?.input && typeof call.input === "object") {
-      return { ok: true, args: call.input };
+    if (toolCall?.function?.arguments) {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+        return { ok: true, args: parsed };
+      } catch {
+        /* fall through to text salvage */
+      }
     }
 
-    const textBlock = data.content?.find((b) => b.type === "text")?.text ?? "";
+    const textBlock = message?.content ?? "";
     if (textBlock) {
       // Some responses fall back to plain text JSON — try to salvage it.
       try {
