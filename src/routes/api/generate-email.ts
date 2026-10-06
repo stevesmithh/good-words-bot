@@ -347,6 +347,7 @@ export const Route = createFileRoute("/api/generate-email")({
           ) {
             return Response.json({ error: "One or more fields exceed the allowed length." }, { status: 400 });
           }
+          if (!Array.isArray(body.activeCategories)) body.activeCategories = [];
           if (Array.isArray(body.activeCategories) && body.activeCategories.length > 50) {
             return Response.json({ error: "Too many categories." }, { status: 400 });
           }
