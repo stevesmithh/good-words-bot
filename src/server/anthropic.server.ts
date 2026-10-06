@@ -66,7 +66,7 @@ export async function callClaudeWithTool(
           "You are a precise marketing copywriter. Follow every instruction in the user message literally, especially word limits, tone rules, forbidden words, and the rule to never invent details that are not in the provided offer. Always answer by calling the provided tool with complete field values.",
         messages: [{ role: "user", content: prompt }],
         tools: [anthropicTool],
-        tool_choice: { type: "tool", name: tool.function.name },
+        tool_choice: { type: "auto" },
         temperature: attempt.temperature,
       }),
     });
