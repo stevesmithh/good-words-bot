@@ -94,31 +94,33 @@ const CASUAL_FYI_OPENERS = [
   "low-key reminder",
 ];
 
+// Openers must stay offer-neutral: they must NOT imply a credit, balance or
+// value that the offer does not contain (that caused invented details).
 const NOSPAM_A_OPENERS = [
-  "A balance enhancement is currently available on your profile.",
-  "A pending balance update is available for your review.",
-  "A profile adjustment is now available for review.",
-  "A profile-level credit update is now active.",
-  "A balance status update is now available on your profile.",
-  "A new profile allocation is ready for review.",
+  "A new update is available on your profile.",
+  "An update has been posted to your profile.",
+  "Your profile has a new notice.",
+  "A status update is ready for your review.",
+  "New details are now available on your profile.",
+  "Your profile has been updated.",
 ];
 
 const NOSPAM_B_OPENERS = [
-  "Your profile currently qualifies for an adjusted credit allocation.",
-  "Your profile is eligible for an additional balance credit.",
-  "Your profile currently has an active credit reference.",
-  "Your profile is currently marked for an available adjustment.",
-  "Your profile record now reflects an available allocation update.",
-  "Your profile is currently eligible for a balance-level adjustment.",
+  "Notice: your profile has a new update.",
+  "Update: new details are now listed on your profile.",
+  "Your profile status has changed.",
+  "Profile notice: a new item is ready to view.",
+  "Your profile now shows a new update.",
+  "Status: a new update is listed for you.",
 ];
 
 const NOSPAM_C_OPENERS = [
-  "An adjusted balance update has been applied to your profile.",
-  "A profile adjustment has been recorded.",
-  "A profile-level credit has been made available to you.",
-  "A new allocation reference is available on your profile.",
-  "Profile review complete. An additional credit is available.",
-  "Your profile has a pending balance enhancement awaiting use.",
+  "A new item has been added to your profile.",
+  "Your profile summary has been refreshed.",
+  "Reminder: a new update is waiting on your profile.",
+  "Your profile has a new entry to review.",
+  "An update was recorded on your profile today.",
+  "Your latest profile update is ready.",
 ];
 
 const NOSPAM_SENTENCE_SHAPES = [
