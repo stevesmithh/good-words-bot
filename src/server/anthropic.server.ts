@@ -15,7 +15,7 @@ export type AnthropicResult =
   | { ok: false; status: number; error: string; details?: string };
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+const DEFAULT_MODEL = "claude-opus-5-5";
 
 export async function callClaudeWithTool(
   prompt: string,
@@ -66,8 +66,9 @@ export async function callClaudeWithTool(
           "You are a precise marketing copywriter. Follow every instruction in the user message literally, especially word limits, tone rules, forbidden words, and the rule to never invent details that are not in the provided offer. Always answer by calling the provided tool with complete field values.",
         messages: [{ role: "user", content: prompt }],
         tools: [anthropicTool],
-        tool_choice: { type: "tool", name: tool.function.name },
-        temperature: attempt.temperature,
+        tool_choice: { type: "auto" },
+        // Newer Claude models (e.g. claude-opus-5-5) reject the temperature field.
+        ...(/opus-5-5|opus-5\b/.test(model) ? {} : { temperature: attempt.temperature }),
       }),
     });
 
