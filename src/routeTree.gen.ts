@@ -16,6 +16,7 @@ import { Route as ApiShortioRouteImport } from './routes/api/shortio'
 import { Route as ApiGenerateSocialRouteImport } from './routes/api/generate-social'
 import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
 import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
+import { Route as ApiCatalogRouteImport } from './routes/api/catalog'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
 
@@ -54,6 +55,11 @@ const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
   path: '/api/generate-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCatalogRoute = ApiCatalogRouteImport.update({
+  id: '/api/catalog',
+  path: '/api/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRoute = ApiAuthRouteImport.update({
   id: '/api/auth',
   path: '/api/auth',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/catalog': typeof ApiCatalogRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/catalog': typeof ApiCatalogRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/api/admin': typeof ApiAdminRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/catalog': typeof ApiCatalogRoute
   '/api/generate-email': typeof ApiGenerateEmailRoute
   '/api/generate-sms': typeof ApiGenerateSmsRoute
   '/api/generate-social': typeof ApiGenerateSocialRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/api/admin'
     | '/api/auth'
+    | '/api/catalog'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/api/admin'
     | '/api/auth'
+    | '/api/catalog'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/api/admin'
     | '/api/auth'
+    | '/api/catalog'
     | '/api/generate-email'
     | '/api/generate-sms'
     | '/api/generate-social'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   ApiAdminRoute: typeof ApiAdminRoute
   ApiAuthRoute: typeof ApiAuthRoute
+  ApiCatalogRoute: typeof ApiCatalogRoute
   ApiGenerateEmailRoute: typeof ApiGenerateEmailRoute
   ApiGenerateSmsRoute: typeof ApiGenerateSmsRoute
   ApiGenerateSocialRoute: typeof ApiGenerateSocialRoute
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/catalog': {
+      id: '/api/catalog'
+      path: '/api/catalog'
+      fullPath: '/api/catalog'
+      preLoaderRoute: typeof ApiCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth': {
       id: '/api/auth'
       path: '/api/auth'
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   ApiAdminRoute: ApiAdminRoute,
   ApiAuthRoute: ApiAuthRoute,
+  ApiCatalogRoute: ApiCatalogRoute,
   ApiGenerateEmailRoute: ApiGenerateEmailRoute,
   ApiGenerateSmsRoute: ApiGenerateSmsRoute,
   ApiGenerateSocialRoute: ApiGenerateSocialRoute,
