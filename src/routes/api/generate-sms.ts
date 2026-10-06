@@ -396,6 +396,7 @@ VOICE — STRICT:
   · "Your profile is eligible for an additional balance credit today. Use ${codeValue || "REF40"} during checkout. Access: link"
   · "Your profile currently qualifies for an adjusted credit allocation. Reference: ${codeValue || "REF40"} - link"
 - Allowed vocabulary: balance, profile, credit, allocation, adjustment, enhancement, tier, level, reference, qualifies, eligible, available, applied, pending, review, apply, use, access, continue, update, notice.
+- FACT LOCK: words like balance, credit, allocation or enhancement may ONLY be used when the offer details actually contain a credit/bonus/value. If the offer is about something else (quests, XP, levels, features, events), describe THAT neutrally (e.g. "New quests are now listed on your profile. Each quest adds 200 XP.") and never imply a credit or balance change.
 - Capitalization: Standard sentence case. Any code value stays in its original case.
 - Punctuation: periods only. No "!", no "?", no "...", no emoji, no ALL CAPS words (other than a code value itself).
 - No brand name. No greeting ("Hi", "Hey"). No sign-off.
@@ -524,6 +525,8 @@ export const Route = createFileRoute("/api/generate-sms")({
       POST: async ({ request }) => {
         try {
           const body = (await request.json()) as SmsBody;
+          if (!Array.isArray(body.activeCategories)) body.activeCategories = [];
+
 
           if (!(await verifyMemberCreds(body))) return unauthorized();
 
