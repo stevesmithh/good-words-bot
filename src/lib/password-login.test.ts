@@ -1,11 +1,12 @@
-import { expect, test } from "bun:test";
+import { test } from "node:test";
+import { strict as assert } from "node:assert";
 import { passwordLoginUsername } from "./password-login";
 
 test("password-only login selects the sole existing account without a supplied username", () => {
-  expect(passwordLoginUsername([{ username: "marketing" }])).toBe("marketing");
+  assert.equal(passwordLoginUsername([{ username: "marketing" }]), "marketing");
 });
 
 test("password-only login cannot select an account when multiple accounts exist", () => {
-  expect(passwordLoginUsername([{ username: "marketing" }, { username: "other" }])).toBeNull();
-  expect(passwordLoginUsername([])).toBeNull();
+  assert.equal(passwordLoginUsername([{ username: "marketing" }, { username: "other" }]), null);
+  assert.equal(passwordLoginUsername([]), null);
 });
