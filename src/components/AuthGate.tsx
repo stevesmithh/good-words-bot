@@ -50,7 +50,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -63,7 +62,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", username: username.trim(), password }),
+        body: JSON.stringify({ action: "login", password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -86,27 +85,15 @@ function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
           <CardTitle className="flex items-center gap-2">
             <LogIn className="h-5 w-5" /> Sign in
           </CardTitle>
-          <CardDescription>Enter your team credentials to continue.</CardDescription>
+          <CardDescription>Enter your password to continue.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                autoFocus
-                autoComplete="username"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setError("");
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                autoFocus
                 type="password"
                 autoComplete="current-password"
                 value={password}
@@ -117,7 +104,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: () => void }) {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={busy || !username || !password}>
+            <Button type="submit" className="w-full" disabled={busy || !password}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
             </Button>
           </form>
