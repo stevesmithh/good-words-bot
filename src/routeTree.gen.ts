@@ -9,61 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiSocialShortlinkRouteImport } from './routes/api/social-shortlink'
-import { Route as ApiShortioRouteImport } from './routes/api/shortio'
-import { Route as ApiSheetPromosRouteImport } from './routes/api/sheet-promos'
-import { Route as ApiGenerateSocialRouteImport } from './routes/api/generate-social'
-import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
-import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
-import { Route as ApiCatalogRouteImport } from './routes/api/catalog'
-import { Route as ApiAuthRouteImport } from './routes/api/auth'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ApiAdminRouteImport } from './routes/api/admin'
+import { Route as ApiAuthRouteImport } from './routes/api/auth'
+import { Route as ApiCatalogRouteImport } from './routes/api/catalog'
+import { Route as ApiGenerateEmailRouteImport } from './routes/api/generate-email'
+import { Route as ApiGenerateSmsRouteImport } from './routes/api/generate-sms'
+import { Route as ApiGenerateSocialRouteImport } from './routes/api/generate-social'
+import { Route as ApiSheetPromosRouteImport } from './routes/api/sheet-promos'
+import { Route as ApiShortioRouteImport } from './routes/api/shortio'
+import { Route as ApiSocialShortlinkRouteImport } from './routes/api/social-shortlink'
 
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSocialShortlinkRoute = ApiSocialShortlinkRouteImport.update({
-  id: '/api/social-shortlink',
-  path: '/api/social-shortlink',
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiShortioRoute = ApiShortioRouteImport.update({
-  id: '/api/shortio',
-  path: '/api/shortio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSheetPromosRoute = ApiSheetPromosRouteImport.update({
-  id: '/api/sheet-promos',
-  path: '/api/sheet-promos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiGenerateSocialRoute = ApiGenerateSocialRouteImport.update({
-  id: '/api/generate-social',
-  path: '/api/generate-social',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiGenerateSmsRoute = ApiGenerateSmsRouteImport.update({
-  id: '/api/generate-sms',
-  path: '/api/generate-sms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
-  id: '/api/generate-email',
-  path: '/api/generate-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCatalogRoute = ApiCatalogRouteImport.update({
-  id: '/api/catalog',
-  path: '/api/catalog',
+const ApiAdminRoute = ApiAdminRouteImport.update({
+  id: '/api/admin',
+  path: '/api/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthRoute = ApiAuthRouteImport.update({
@@ -71,9 +41,39 @@ const ApiAuthRoute = ApiAuthRouteImport.update({
   path: '/api/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAdminRoute = ApiAdminRouteImport.update({
-  id: '/api/admin',
-  path: '/api/admin',
+const ApiCatalogRoute = ApiCatalogRouteImport.update({
+  id: '/api/catalog',
+  path: '/api/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateEmailRoute = ApiGenerateEmailRouteImport.update({
+  id: '/api/generate-email',
+  path: '/api/generate-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateSmsRoute = ApiGenerateSmsRouteImport.update({
+  id: '/api/generate-sms',
+  path: '/api/generate-sms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateSocialRoute = ApiGenerateSocialRouteImport.update({
+  id: '/api/generate-social',
+  path: '/api/generate-social',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSheetPromosRoute = ApiSheetPromosRouteImport.update({
+  id: '/api/sheet-promos',
+  path: '/api/sheet-promos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShortioRoute = ApiShortioRouteImport.update({
+  id: '/api/shortio',
+  path: '/api/shortio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialShortlinkRoute = ApiSocialShortlinkRouteImport.update({
+  id: '/api/social-shortlink',
+  path: '/api/social-shortlink',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -175,13 +175,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -189,53 +182,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/social-shortlink': {
-      id: '/api/social-shortlink'
-      path: '/api/social-shortlink'
-      fullPath: '/api/social-shortlink'
-      preLoaderRoute: typeof ApiSocialShortlinkRouteImport
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/shortio': {
-      id: '/api/shortio'
-      path: '/api/shortio'
-      fullPath: '/api/shortio'
-      preLoaderRoute: typeof ApiShortioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sheet-promos': {
-      id: '/api/sheet-promos'
-      path: '/api/sheet-promos'
-      fullPath: '/api/sheet-promos'
-      preLoaderRoute: typeof ApiSheetPromosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/generate-social': {
-      id: '/api/generate-social'
-      path: '/api/generate-social'
-      fullPath: '/api/generate-social'
-      preLoaderRoute: typeof ApiGenerateSocialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/generate-sms': {
-      id: '/api/generate-sms'
-      path: '/api/generate-sms'
-      fullPath: '/api/generate-sms'
-      preLoaderRoute: typeof ApiGenerateSmsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/generate-email': {
-      id: '/api/generate-email'
-      path: '/api/generate-email'
-      fullPath: '/api/generate-email'
-      preLoaderRoute: typeof ApiGenerateEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/catalog': {
-      id: '/api/catalog'
-      path: '/api/catalog'
-      fullPath: '/api/catalog'
-      preLoaderRoute: typeof ApiCatalogRouteImport
+    '/api/admin': {
+      id: '/api/admin'
+      path: '/api/admin'
+      fullPath: '/api/admin'
+      preLoaderRoute: typeof ApiAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth': {
@@ -245,11 +203,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/admin': {
-      id: '/api/admin'
-      path: '/api/admin'
-      fullPath: '/api/admin'
-      preLoaderRoute: typeof ApiAdminRouteImport
+    '/api/catalog': {
+      id: '/api/catalog'
+      path: '/api/catalog'
+      fullPath: '/api/catalog'
+      preLoaderRoute: typeof ApiCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-email': {
+      id: '/api/generate-email'
+      path: '/api/generate-email'
+      fullPath: '/api/generate-email'
+      preLoaderRoute: typeof ApiGenerateEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-sms': {
+      id: '/api/generate-sms'
+      path: '/api/generate-sms'
+      fullPath: '/api/generate-sms'
+      preLoaderRoute: typeof ApiGenerateSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-social': {
+      id: '/api/generate-social'
+      path: '/api/generate-social'
+      fullPath: '/api/generate-social'
+      preLoaderRoute: typeof ApiGenerateSocialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sheet-promos': {
+      id: '/api/sheet-promos'
+      path: '/api/sheet-promos'
+      fullPath: '/api/sheet-promos'
+      preLoaderRoute: typeof ApiSheetPromosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/shortio': {
+      id: '/api/shortio'
+      path: '/api/shortio'
+      fullPath: '/api/shortio'
+      preLoaderRoute: typeof ApiShortioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social-shortlink': {
+      id: '/api/social-shortlink'
+      path: '/api/social-shortlink'
+      fullPath: '/api/social-shortlink'
+      preLoaderRoute: typeof ApiSocialShortlinkRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
