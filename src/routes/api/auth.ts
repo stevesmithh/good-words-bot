@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
+import { passwordLoginUsername } from "@/lib/password-login";
 
 const BCRYPT_ROUNDS = 10;
 
@@ -137,12 +138,18 @@ export const Route = createFileRoute("/api/auth")({
 
           // --- Public action: login ---
           if (body.action === "login") {
-            const username = asStr(body.username);
             const password = asStr(body.password);
-            if (!username || !password) return bad("Username and password required");
-            if (username.length > 100 || password.length > 200) return bad("Field too long");
+            if (!password) return bad("Password required");
+            if (password.length > 200) return bad("Field too long");
+            const { data: accounts, error: accountError } = await supabase
+              .from("team_members")
+              .select("username")
+              .limit(2);
+            if (accountError) return bad("Sign-in unavailable", 500);
+            const username = passwordLoginUsername(accounts ?? []);
+            if (!username) return bad("Sign-in unavailable", 401);
             const member = await verifyMember(supabase, username, password);
-            if (!member) return bad("Invalid username or password", 401);
+            if (!member) return bad("Invalid password", 401);
             return Response.json({
               success: true,
               username: member.username,

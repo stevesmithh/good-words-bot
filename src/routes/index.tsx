@@ -22,6 +22,10 @@ export const Route = createFileRoute("/")({
         content:
           "Generate promotional emails and bulk SMS designed to land in the primary inbox and pass US carrier filters.",
       },
+      { property: "og:title", content: "Copy Generator — Inbox-Safe Emails & SMS" },
+      { property: "og:description", content: "Create email, SMS, and social copy for your promotions." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
 });
@@ -50,8 +54,7 @@ function Index() {
           </div>
           {session && (
             <span className="hidden text-xs text-muted-foreground sm:inline">
-              Signed in as <strong className="font-medium text-foreground">{session.username}</strong>
-              {session.isAdmin && " (admin)"}
+              {session.isAdmin ? "Admin" : "Signed in"}
             </span>
           )}
           {session && (

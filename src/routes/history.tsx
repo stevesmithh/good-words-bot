@@ -31,6 +31,16 @@ type HistoryDetail = HistoryItem & {
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
+  head: () => ({
+    meta: [
+      { title: "Generation History — Copy Generator" },
+      { name: "description", content: "Review previous offers and generated email, SMS, and social copy." },
+      { property: "og:title", content: "Generation History — Copy Generator" },
+      { property: "og:description", content: "Review previous offers and generated email, SMS, and social copy." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 function HistoryPage() {
