@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { LinkPreviewButton } from "@/components/LinkPreview";
 import {
   AlertCircle,
   Copy,
@@ -329,7 +330,10 @@ export function SocialGenerator() {
                   </SelectContent>
                 </Select>
                 {selectedPromotion && (
-                  <p className="truncate text-xs text-muted-foreground">→ {selectedPromotion.destination_url}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">→ {selectedPromotion.destination_url}</p>
+                    <LinkPreviewButton url={selectedPromotion.destination_url} />
+                  </div>
                 )}
               </div>
             ) : (
