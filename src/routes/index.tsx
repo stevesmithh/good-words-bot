@@ -19,15 +19,15 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Sigma Copy Generator" },
+      { title: "Copy Generator" },
       {
         name: "description",
-        content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns.",
+        content: "SMS, email, and social promotion copy generator for marketing campaigns.",
       },
-      { property: "og:title", content: "Sigma Copy Generator" },
-      { property: "og:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
-      { name: "twitter:title", content: "Sigma Copy Generator" },
-      { name: "twitter:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
+      { property: "og:title", content: "Copy Generator" },
+      { property: "og:description", content: "SMS, email, and social promotion copy generator for marketing campaigns." },
+      { name: "twitter:title", content: "Copy Generator" },
+      { name: "twitter:description", content: "SMS, email, and social promotion copy generator for marketing campaigns." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://text.sigmaworkzone.com/" },
       { property: "og:image", content: SHARE_IMAGE },
