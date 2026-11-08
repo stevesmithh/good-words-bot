@@ -36,8 +36,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Copy Generator" },
-      { name: "description", content: "Copy Generator" },
+      { title: "Sigma Copy Generator" },
+      { name: "description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
       { name: "robots", content: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
       { name: "googlebot", content: "noindex, nofollow" },
       { property: "og:title", content: "Copy Generator" },
