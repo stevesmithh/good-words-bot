@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { clearSession, getSession } from "@/lib/session";
 
 const SHARE_IMAGE =
-  "https://text.sigmaworkzone.com/__l5e/assets-v1/37201651-cf1e-4081-8c26-34a27c881c07/sigma_share_card.jpg";
+  "https://text.sigmaworkzone.com/__l5e/assets-v1/d26736f1-9274-4179-b68b-7dd52bcef63f/copy_generator_share.jpg";
 
 type Tab = "email" | "sms" | "social" | "dedup";
 
@@ -19,15 +19,15 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Sigma Copy Generator" },
+      { title: "Copy Generator" },
       {
         name: "description",
-        content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns.",
+        content: "SMS, email, and social promotion copy generator for marketing campaigns.",
       },
-      { property: "og:title", content: "Sigma Copy Generator" },
-      { property: "og:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
-      { name: "twitter:title", content: "Sigma Copy Generator" },
-      { name: "twitter:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
+      { property: "og:title", content: "Copy Generator" },
+      { property: "og:description", content: "SMS, email, and social promotion copy generator for marketing campaigns." },
+      { name: "twitter:title", content: "Copy Generator" },
+      { name: "twitter:description", content: "SMS, email, and social promotion copy generator for marketing campaigns." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://text.sigmaworkzone.com/" },
       { property: "og:image", content: SHARE_IMAGE },
