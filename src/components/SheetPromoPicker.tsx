@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { authFields } from "@/lib/session";
+import { LinkPreviewButton } from "@/components/LinkPreview";
 
 export type SheetPromo = { name: string; url: string; details: string };
 type SheetSite = { name: string; promotions: SheetPromo[] };
@@ -98,6 +99,12 @@ export function SheetPromoPicker({
         </div>
       </div>
       {error && <p className="text-xs text-destructive">Could not load the promotions sheet.</p>}
+      {value?.promo.url && (
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">→ {value.promo.url}</p>
+          <LinkPreviewButton url={value.promo.url} />
+        </div>
+      )}
       {value?.promo.details && (
         <p className="line-clamp-3 text-xs text-muted-foreground">{value.promo.details}</p>
       )}
