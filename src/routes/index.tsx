@@ -10,22 +10,31 @@ import { AdminButton } from "@/components/AdminEditor";
 import { Button } from "@/components/ui/button";
 import { clearSession, getSession } from "@/lib/session";
 
+const SHARE_IMAGE =
+  "https://text.sigmaworkzone.com/__l5e/assets-v1/37201651-cf1e-4081-8c26-34a27c881c07/sigma_share_card.jpg";
+
 type Tab = "email" | "sms" | "social" | "dedup";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Copy Generator — Inbox-Safe Emails & SMS" },
+      { title: "Sigma Copy Generator" },
       {
         name: "description",
-        content:
-          "Generate promotional emails and bulk SMS designed to land in the primary inbox and pass US carrier filters.",
+        content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns.",
       },
-      { property: "og:title", content: "Copy Generator — Inbox-Safe Emails & SMS" },
-      { property: "og:description", content: "Create email, SMS, and social copy for your promotions." },
+      { property: "og:title", content: "Sigma Copy Generator" },
+      { property: "og:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
+      { name: "twitter:title", content: "Sigma Copy Generator" },
+      { name: "twitter:description", content: "SMS, email, and social promotion copy generator for Sigma marketing campaigns." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://text.sigmaworkzone.com/" },
+      { property: "og:image", content: SHARE_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:image", content: SHARE_IMAGE },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
